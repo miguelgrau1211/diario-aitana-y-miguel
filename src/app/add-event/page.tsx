@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { generateTitleAction, createEventAction } from './actions';
+import { createEventAction } from './actions';
+import { generateTitleAction } from './actions';
 import { ArrowLeft, Loader2, Sparkles, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { storage } from '@/lib/firebase';
@@ -105,7 +106,7 @@ export default function AddEventPage() {
       router.push('/');
 
     } catch (error) {
-      console.error(error);
+      console.error("Detailed Error:", error)
       const errorMessage = error instanceof Error ? error.message : 'No se pudo guardar el recuerdo. Por favor, inténtalo de nuevo.';
       toast({
         variant: 'destructive',
