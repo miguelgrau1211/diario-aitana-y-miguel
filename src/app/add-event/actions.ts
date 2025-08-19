@@ -16,7 +16,7 @@ export async function generateTitleAction(description: string) {
   }
 }
 
-export async function createEventAction(formData: FormData): Promise<{ success?: boolean, error?: string, redirectPath?: string }> {
+export async function createEventAction(formData: FormData): Promise<{ success?: boolean, error?: string }> {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const image = formData.get('image') as File;
@@ -45,5 +45,5 @@ export async function createEventAction(formData: FormData): Promise<{ success?:
   }
   
   revalidatePath('/');
-  return { success: true, redirectPath: '/' };
+  return { success: true };
 }
