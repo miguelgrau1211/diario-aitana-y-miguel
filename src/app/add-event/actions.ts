@@ -4,7 +4,6 @@ import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 export async function generateTitleAction(description: string) {
@@ -17,7 +16,7 @@ export async function generateTitleAction(description: string) {
   }
 }
 
-export async function createEventAction(formData: FormData) {
+export async function createEventAction(formData: FormData): Promise<{ success?: boolean, error?: string, redirectPath?: string }> {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const image = formData.get('image') as File;
@@ -46,5 +45,5 @@ export async function createEventAction(formData: FormData) {
   }
   
   revalidatePath('/');
-  redirect('/');
+  return { success: true, redirectPath: '/' };
 }

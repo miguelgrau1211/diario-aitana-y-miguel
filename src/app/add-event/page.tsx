@@ -81,13 +81,21 @@ export default function AddEventPage() {
 
     try {
       const result = await createEventAction(formData);
-      if(result?.error) {
+      
+      if (result?.error) {
         throw new Error(result.error);
       }
-      toast({
-        title: '¡Recuerdo guardado!',
-        description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
-      });
+
+      if (result?.success && result.redirectPath) {
+        toast({
+          title: '¡Recuerdo guardado!',
+          description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
+        });
+        router.push(result.redirectPath);
+      } else {
+        // Fallback in case redirectPath is not provided
+        throw new Error('Algo salió mal durante la creación del evento.');
+      }
     } catch (error) {
       toast({
         variant: 'destructive',
