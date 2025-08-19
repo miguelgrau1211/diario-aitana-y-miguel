@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { generateTitleAction, createEventAction } from './actions';
 import { ArrowLeft, Loader2, Sparkles, Upload } from 'lucide-react';
 import Image from 'next/image';
+import { storage } from '@/lib/firebase';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: 'El título debe tener al menos 2 caracteres.' }).max(100),
@@ -74,13 +76,21 @@ export default function AddEventPage() {
 
   const onSubmit = async (data: EventFormValues) => {
     setIsSubmitting(true);
-    const formData = new FormData();
-    formData.append('title', data.title);
-    formData.append('description', data.description);
-    formData.append('image', data.image[0]);
-
+    
     try {
-      const result = await createEventAction(formData);
+      const imageFile = data.image[0] as File;
+
+      // 1. Upload image to Firebase Storage from the client
+      const storageRef = ref(storage, `events/${Date.now()}_${imageFile.name}`);
+      const snapshot = await uploadBytes(storageRef, imageFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      // 2. Call server action with the image URL
+      const result = await createEventAction({
+        title: data.title,
+        description: data.description,
+        imageUrl: downloadURL,
+      });
       
       if (result?.error) {
         throw new Error(result.error);
@@ -94,10 +104,11 @@ export default function AddEventPage() {
 
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'No se pudo guardar el recuerdo. Por favor, inténtalo de nuevo.';
       toast({
         variant: 'destructive',
         title: 'Error al guardar',
-        description: 'No se pudo guardar el recuerdo. Por favor, inténtalo de nuevo.',
+        description: errorMessage,
       });
     } finally {
       setIsSubmitting(false);
