@@ -12,11 +12,14 @@ export async function generateTitleAction(description: string) {
     return { title: result.title };
   } catch (error) {
     console.error('Error suggesting title:', error);
-    return { error: 'Failed to suggest title.' };
+    if (error instanceof Error) {
+      return { error: `Failed to suggest title: ${error.message}` };
+    }
+    return { error: 'An unknown error occurred while suggesting the title.' };
   }
 }
 
-export async function createEventAction(formData: FormData): Promise<{ success?: boolean, error?: string }> {
+export async function createEventAction(formData: FormData): Promise<{ success?: boolean; error?: string }> {
   const title = formData.get('title') as string;
   const description = formData.get('description') as string;
   const image = formData.get('image') as File;
@@ -39,9 +42,10 @@ export async function createEventAction(formData: FormData): Promise<{ success?:
       createdAt: serverTimestamp(),
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating event:', error);
-    return { error: 'Failed to create event.' };
+    // Return a more specific error message
+    return { error: `Failed to create event: ${error.message}` };
   }
   
   revalidatePath('/');
