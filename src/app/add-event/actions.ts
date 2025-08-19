@@ -1,8 +1,9 @@
 'use server';
 
 import { suggestTitle } from '@/ai/flows/suggest-title';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -20,18 +21,22 @@ export async function generateTitleAction(description: string) {
 }
 
 export async function createEventAction(
-    { title, description, imageUrl }: { title: string; description: string; imageUrl: string; }
+    { title, description, imageDataUri, imageName }: { title: string; description: string; imageDataUri: string; imageName: string;}
   ): Promise<{ success?: boolean; error?: string }> {
 
-  if (!title || !description || !imageUrl) {
+  if (!title || !description || !imageDataUri || !imageName) {
     return { error: 'Missing required fields' };
   }
 
   try {
+    const storageRef = ref(storage, `events/${Date.now()}_${imageName}`);
+    const snapshot = await uploadString(storageRef, imageDataUri, 'data_url');
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
     await addDoc(collection(db, 'events'), {
       title,
       description,
-      imageUrl,
+      imageUrl: downloadURL,
       createdAt: serverTimestamp(),
     });
 

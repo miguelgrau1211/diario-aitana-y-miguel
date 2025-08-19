@@ -14,8 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { generateTitleAction, createEventAction } from './actions';
 import { ArrowLeft, Loader2, Sparkles, Upload } from 'lucide-react';
 import Image from 'next/image';
-import { storage } from '@/lib/firebase';
-import { getDownloadURL, ref, uploadString } from 'firebase/storage';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: 'El título debe tener al menos 2 caracteres.' }).max(100),
@@ -35,7 +33,6 @@ const fileToDataUri = (file: File) => new Promise<string>((resolve, reject) => {
   };
   reader.readAsDataURL(file);
 });
-
 
 export default function AddEventPage() {
   const router = useRouter();
@@ -73,13 +70,14 @@ export default function AddEventPage() {
           description: 'Se ha generado un título para tu recuerdo.',
         });
       } else {
-        throw new Error('No se pudo generar el título.');
+        throw new Error(result.error || 'No se pudo generar el título.');
       }
     } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : 'No se pudo sugerir un título. Inténtalo de nuevo.';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo sugerir un título. Inténtalo de nuevo.',
+        description: errorMessage,
       });
     } finally {
       setIsSuggestingTitle(false);
@@ -92,15 +90,12 @@ export default function AddEventPage() {
     try {
       const imageFile = data.image[0] as File;
       const imageDataUri = await fileToDataUri(imageFile);
-      
-      const storageRef = ref(storage, `events/${Date.now()}_${imageFile.name}`);
-      const snapshot = await uploadString(storageRef, imageDataUri, 'data_url');
-      const downloadURL = await getDownloadURL(snapshot.ref);
 
       const result = await createEventAction({
         title: data.title,
         description: data.description,
-        imageUrl: downloadURL,
+        imageDataUri: imageDataUri,
+        imageName: imageFile.name,
       });
       
       if (result?.error) {
@@ -120,7 +115,8 @@ export default function AddEventPage() {
         title: 'Error al guardar',
         description: errorMessage,
       });
-      setIsSubmitting(false);
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
