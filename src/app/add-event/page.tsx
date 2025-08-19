@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { generateTitleAction, createEventAction } from './actions';
 import { ArrowLeft, Loader2, Sparkles, Upload } from 'lucide-react';
 import Image from 'next/image';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: 'El título debe tener al menos 2 caracteres.' }).max(100),
@@ -22,17 +24,6 @@ const eventFormSchema = z.object({
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
-
-const fileToDataUri = (file: File) => new Promise<string>((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    resolve(event.target?.result as string);
-  };
-  reader.onerror = (error) => {
-    reject(error);
-  };
-  reader.readAsDataURL(file);
-});
 
 export default function AddEventPage() {
   const router = useRouter();
@@ -89,13 +80,17 @@ export default function AddEventPage() {
     
     try {
       const imageFile = data.image[0] as File;
-      const imageDataUri = await fileToDataUri(imageFile);
+      
+      // 1. Upload image from client
+      const storageRef = ref(storage, `events/${Date.now()}_${imageFile.name}`);
+      const snapshot = await uploadBytes(storageRef, imageFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
 
+      // 2. Call server action with image URL
       const result = await createEventAction({
         title: data.title,
         description: data.description,
-        imageDataUri: imageDataUri,
-        imageName: imageFile.name,
+        imageUrl: downloadURL,
       });
       
       if (result?.error) {
@@ -106,6 +101,8 @@ export default function AddEventPage() {
         title: '¡Recuerdo guardado!',
         description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
       });
+
+      router.push('/');
 
     } catch (error) {
       console.error(error);
