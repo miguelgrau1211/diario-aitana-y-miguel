@@ -4,7 +4,7 @@ import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 export async function generateTitleAction(description: string) {
   try {
@@ -22,7 +22,7 @@ export async function createEventAction(formData: FormData) {
   const image = formData.get('image') as File;
 
   if (!title || !description || !image) {
-    throw new Error('Missing required fields');
+    return { error: 'Missing required fields' };
   }
 
   try {
@@ -39,11 +39,10 @@ export async function createEventAction(formData: FormData) {
       createdAt: serverTimestamp(),
     });
 
-    // 3. Revalidate path to show new event
-    revalidatePath('/');
-
   } catch (error) {
     console.error('Error creating event:', error);
-    throw new Error('Failed to create event.');
+    return { error: 'Failed to create event.' };
   }
+  
+  redirect('/');
 }

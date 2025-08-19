@@ -80,12 +80,14 @@ export default function AddEventPage() {
     formData.append('image', data.image[0]);
 
     try {
-      await createEventAction(formData);
+      const result = await createEventAction(formData);
+      if(result?.error) {
+        throw new Error(result.error);
+      }
       toast({
         title: '¡Recuerdo guardado!',
         description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
       });
-      router.push('/');
     } catch (error) {
       toast({
         variant: 'destructive',
