@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { generateTitleAction, createEventAction } from './actions';
 import { ArrowLeft, Loader2, Sparkles, Upload } from 'lucide-react';
 import Image from 'next/image';
+import { storage } from '@/lib/firebase';
+import { getDownloadURL, ref, uploadString } from 'firebase/storage';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: 'El título debe tener al menos 2 caracteres.' }).max(100),
@@ -89,22 +91,22 @@ export default function AddEventPage() {
     
     try {
       const imageFile = data.image[0] as File;
-
-      // 1. Convert image to data URI
       const imageDataUri = await fileToDataUri(imageFile);
+      
+      const storageRef = ref(storage, `events/${Date.now()}_${imageFile.name}`);
+      const snapshot = await uploadString(storageRef, imageDataUri, 'data_url');
+      const downloadURL = await getDownloadURL(snapshot.ref);
 
-      // 2. Call server action with the data URI
       const result = await createEventAction({
         title: data.title,
         description: data.description,
-        imageDataUri: imageDataUri,
+        imageUrl: downloadURL,
       });
       
       if (result?.error) {
         throw new Error(result.error);
       }
       
-      // The redirect is now handled in the server action, but show a toast before that
       toast({
         title: '¡Recuerdo guardado!',
         description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
@@ -118,7 +120,6 @@ export default function AddEventPage() {
         title: 'Error al guardar',
         description: errorMessage,
       });
-      // Fallback in case redirect fails.
       setIsSubmitting(false);
     }
   };
