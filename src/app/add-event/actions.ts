@@ -5,6 +5,7 @@ import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 export async function generateTitleAction(description: string) {
   try {
@@ -44,5 +45,6 @@ export async function createEventAction(formData: FormData) {
     return { error: 'Failed to create event.' };
   }
   
+  revalidatePath('/');
   redirect('/');
 }
