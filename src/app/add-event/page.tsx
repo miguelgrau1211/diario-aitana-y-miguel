@@ -86,22 +86,20 @@ export default function AddEventPage() {
         throw new Error(result.error);
       }
 
-      if (result?.success && result.redirectPath) {
-        toast({
-          title: '¡Recuerdo guardado!',
-          description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
-        });
-        router.push(result.redirectPath);
-      } else {
-        // Fallback in case redirectPath is not provided
-        throw new Error('Algo salió mal durante la creación del evento.');
-      }
+      toast({
+        title: '¡Recuerdo guardado!',
+        description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
+      });
+      router.push('/');
+
     } catch (error) {
+      console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error al guardar',
         description: 'No se pudo guardar el recuerdo. Por favor, inténtalo de nuevo.',
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
