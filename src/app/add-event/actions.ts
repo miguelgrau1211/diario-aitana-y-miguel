@@ -2,7 +2,7 @@
 
 import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db, storage } from '@/lib/firebase';
-import { addDoc, collection, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc } from 'firebase/firestore';
 import { deleteObject, ref } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 
@@ -20,10 +20,10 @@ export async function generateTitleAction(description: string) {
 }
 
 export async function createEventAction(
-    { title, description, imageUrl }: { title: string; description: string; imageUrl: string; }
+    { title, description, imageUrl, date }: { title: string; description: string; imageUrl: string; date: Date; }
   ): Promise<{ success?: boolean; error?: string }> {
 
-  if (!title || !description || !imageUrl) {
+  if (!title || !description || !imageUrl || !date) {
     return { error: 'Missing required fields' };
   }
 
@@ -32,7 +32,7 @@ export async function createEventAction(
       title,
       description,
       imageUrl: imageUrl,
-      createdAt: serverTimestamp(),
+      createdAt: date,
     });
   } catch (error: any) {
     console.error('Error creating event:', error);
