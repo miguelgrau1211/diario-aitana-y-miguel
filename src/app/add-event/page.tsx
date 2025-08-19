@@ -14,8 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { generateTitleAction, createEventAction } from './actions';
 import { ArrowLeft, Loader2, Sparkles, Upload } from 'lucide-react';
 import Image from 'next/image';
-import { storage } from '@/lib/firebase';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: 'El título debe tener al menos 2 caracteres.' }).max(100),
@@ -24,6 +22,18 @@ const eventFormSchema = z.object({
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
+
+const fileToDataUri = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    resolve(event.target?.result as string);
+  };
+  reader.onerror = (error) => {
+    reject(error);
+  };
+  reader.readAsDataURL(file);
+});
+
 
 export default function AddEventPage() {
   const router = useRouter();
@@ -80,27 +90,25 @@ export default function AddEventPage() {
     try {
       const imageFile = data.image[0] as File;
 
-      // 1. Upload image to Firebase Storage from the client
-      const storageRef = ref(storage, `events/${Date.now()}_${imageFile.name}`);
-      const snapshot = await uploadBytes(storageRef, imageFile);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      // 1. Convert image to data URI
+      const imageDataUri = await fileToDataUri(imageFile);
 
-      // 2. Call server action with the image URL
+      // 2. Call server action with the data URI
       const result = await createEventAction({
         title: data.title,
         description: data.description,
-        imageUrl: downloadURL,
+        imageDataUri: imageDataUri,
       });
       
       if (result?.error) {
         throw new Error(result.error);
       }
-
+      
+      // The redirect is now handled in the server action, but show a toast before that
       toast({
         title: '¡Recuerdo guardado!',
         description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
       });
-      // The redirect is now handled in the server action
 
     } catch (error) {
       console.error(error);
@@ -110,8 +118,7 @@ export default function AddEventPage() {
         title: 'Error al guardar',
         description: errorMessage,
       });
-    } finally {
-      // It will redirect before this is called, but as a fallback:
+      // Fallback in case redirect fails.
       setIsSubmitting(false);
     }
   };
@@ -179,14 +186,19 @@ export default function AddEventPage() {
                                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                       <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
                                       <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Haz clic para subir</span> o arrastra y suelta</p>
-                                      <p className="text-xs text-muted-foreground">PNG, JPG o GIF (MAX. 800x400px)</p>
+                                      <p className="text-xs text-muted-foreground">PNG, JPG o GIF</p>
                                   </div>
                               )}
                               <Input id="dropzone-file" type="file" className="hidden" accept="image/*"
                                   onChange={(e) => {
                                       field.onChange(e.target.files);
                                       if (e.target.files && e.target.files[0]) {
-                                        setPreviewImage(URL.createObjectURL(e.target.files[0]));
+                                        const file = e.target.files[0];
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          setPreviewImage(reader.result as string);
+                                        };
+                                        reader.readAsDataURL(file);
                                       } else {
                                         setPreviewImage(null);
                                       }
