@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'Amor Diario',
+  title: 'Diario de Miguel y Aitana',
   description: 'Un diario digital para documentar momentos y eventos significativos de una relación de pareja.',
 };
 
