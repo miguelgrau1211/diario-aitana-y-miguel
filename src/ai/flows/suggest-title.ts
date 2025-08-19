@@ -34,13 +34,13 @@ const prompt = ai.definePrompt({
   name: 'suggestTitlePrompt',
   input: {schema: SuggestTitleInputSchema},
   output: {schema: SuggestTitleOutputSchema},
-  prompt: `You are a helpful assistant designed to suggest creative and concise titles for diary entries.
+  prompt: `Eres un asistente amable diseñado para sugerir títulos creativos, concisos y románticos para las entradas de un diario de pareja.
 
-  Based on the following description, suggest a title that captures the essence of the event:
-  Description: {{{description}}}
+  Basándote en la siguiente descripción, sugiere un título en español que capture la esencia del momento:
+  Descripción: {{{description}}}
   
-  The title should be no more than 10 words long.
-  The title should be engaging and reflect the overall sentiment of the description.
+  El título debe tener 10 palabras como máximo.
+  El título debe ser emotivo y reflejar el sentimiento general de la descripción.
 `,
 });
 
