@@ -100,7 +100,7 @@ export default function AddEventPage() {
         title: '¡Recuerdo guardado!',
         description: 'Tu nuevo momento especial ha sido añadido a vuestro diario.',
       });
-      router.push('/');
+      // The redirect is now handled in the server action
 
     } catch (error) {
       console.error(error);
@@ -111,6 +111,7 @@ export default function AddEventPage() {
         description: errorMessage,
       });
     } finally {
+      // It will redirect before this is called, but as a fallback:
       setIsSubmitting(false);
     }
   };

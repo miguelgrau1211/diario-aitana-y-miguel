@@ -4,6 +4,7 @@ import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 export async function generateTitleAction(description: string) {
   try {
@@ -42,5 +43,5 @@ export async function createEventAction(
   }
   
   revalidatePath('/');
-  return { success: true };
+  redirect('/');
 }
