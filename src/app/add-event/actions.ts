@@ -93,3 +93,4 @@ export async function deleteEventAction(
   revalidatePath('/event');
   return { success: true };
 }
+
