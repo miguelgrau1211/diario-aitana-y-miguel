@@ -22,7 +22,7 @@ export async function getEventAction(id: string): Promise<{ event?: Omit<DiaryEv
     } else {
       return { error: 'No se encontró el recuerdo.' };
     }
-  } catch (error: any) => {
+  } catch (error: any) {
     console.error('Error fetching event:', error);
     return { error: `Error al obtener el recuerdo: ${error.message}` };
   }
