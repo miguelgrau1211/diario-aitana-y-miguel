@@ -168,7 +168,7 @@ export default function EventDetailPage() {
 
        <Header />
        <main className="flex-1 w-full">
-        <div className="relative h-64 md:h-80 w-full">
+        <div className="relative aspect-[4/3] md:aspect-video w-full">
             <Image
                 src={event.imageUrl}
                 alt={event.title}
@@ -246,7 +246,7 @@ export default function EventDetailPage() {
                             </div>
                         )}
                         {item.type === 'image' && (
-                            <div className="w-full aspect-video relative rounded-lg overflow-hidden shadow-lg">
+                            <div className="w-full aspect-[4/3] relative rounded-lg overflow-hidden shadow-lg">
                                 <Image src={item.value} alt="Recuerdo" fill className="object-cover" />
                             </div>
                         )}

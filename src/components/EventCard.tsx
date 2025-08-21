@@ -20,7 +20,7 @@ export function EventCard({ event }: EventCardProps) {
     <Link href={`/event/${event.id}`} className="block transition-all hover:shadow-lg hover:-translate-y-1 duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
       <Card className="w-full overflow-hidden h-full flex flex-col">
         <CardHeader className="p-0">
-          <div className="aspect-video relative">
+          <div className="aspect-[4/3] relative">
             <Image
               src={event.imageUrl}
               alt={event.title}

@@ -93,9 +93,9 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
         </DialogHeader>
         
         <div className="flex items-center justify-center w-full my-4">
-            <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors">
+            <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
                 {previewImage ? (
-                    <Image src={previewImage} alt="Vista previa" width={200} height={200} className="object-contain h-full p-2" />
+                    <Image src={previewImage} alt="Vista previa" fill className="object-cover" />
                 ) : (
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                         <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
