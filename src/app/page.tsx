@@ -13,13 +13,24 @@ import Link from 'next/link';
 import { Plus, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { PasswordProtect } from '@/components/PasswordProtect';
 
 export default function Home() {
   const [events, setEvents] = useState<DiaryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    // Verificar si ya está autenticado en la sesión del navegador
+    if (sessionStorage.getItem('isAuthenticated') === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return; // No cargar datos si no está autenticado
+
     const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const eventsData: DiaryEvent[] = [];
@@ -28,10 +39,18 @@ export default function Home() {
       });
       setEvents(eventsData);
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching events:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isAuthenticated]);
+
+  const handleAuthenticated = () => {
+    sessionStorage.setItem('isAuthenticated', 'true');
+    setIsAuthenticated(true);
+  };
 
   const filteredEvents = useMemo(() => {
     if (!searchQuery) {
@@ -45,6 +64,10 @@ export default function Home() {
       );
     });
   }, [events, searchQuery]);
+
+  if (!isAuthenticated) {
+    return <PasswordProtect onAuthenticated={handleAuthenticated} />;
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
