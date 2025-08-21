@@ -1,3 +1,4 @@
+
 'use server';
 
 import { suggestTitle } from '@/ai/flows/suggest-title';
@@ -63,6 +64,9 @@ export async function deleteEventAction(
     return { error: 'ID de evento o URL de imagen faltante.' };
   }
 
+  // Note: This doesn't delete sub-collections like 'content'.
+  // For a full delete, a Cloud Function would be needed to handle this recursively.
+
   try {
     if (imageUrl) {
       const imageRef = ref(storage, imageUrl);
@@ -88,25 +92,4 @@ export async function deleteEventAction(
   revalidatePath('/');
   revalidatePath('/event');
   return { success: true };
-}
-
-export async function getEventAction(id: string): Promise<{ event?: Omit<DiaryEvent, 'createdAt'> & { createdAt: string }; error?: string }> {
-  if (!id) {
-    return { error: 'ID de evento faltante.' };
-  }
-  try {
-    const docRef = doc(db, 'events', id);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      const eventData = docSnap.data();
-      const createdAt = (eventData.createdAt as Timestamp).toDate().toISOString();
-      return { event: { id: docSnap.id, ...eventData, createdAt } as Omit<DiaryEvent, 'createdAt'> & { createdAt: string } };
-    } else {
-      return { error: 'No se encontró el recuerdo.' };
-    }
-  } catch (error: any) {
-    console.error('Error fetching event:', error);
-    return { error: `Error al obtener el recuerdo: ${error.message}` };
-  }
 }

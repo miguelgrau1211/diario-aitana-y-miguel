@@ -1,3 +1,4 @@
+
 import type { Timestamp } from "firebase/firestore";
 
 export interface DiaryEvent {
@@ -12,6 +13,12 @@ export interface NewDiaryEvent {
   title: string;
   description: string;
   imageUrl: string;
-  createdAt?: Timestamp;
   date: Date;
+}
+
+export interface EventContent {
+  id: string;
+  type: 'text' | 'image';
+  value: string;
+  createdAt: Date;
 }
