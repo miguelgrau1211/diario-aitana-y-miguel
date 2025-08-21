@@ -108,7 +108,7 @@ export function EventCard({ event }: EventCardProps) {
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Esta acción no se puede deshacer. Esto eliminará permanentemente el recuerdo de vuestro diario.
+                  Esta acción no se puede deshacer. Esto eliminará permanentemente el recuerdo y todo su contenido.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
