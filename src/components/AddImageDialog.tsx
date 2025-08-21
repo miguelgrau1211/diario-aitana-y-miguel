@@ -125,7 +125,7 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
         <div className="flex items-center justify-center w-full my-4">
             <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
                 {croppedImageResult?.base64 ? (
-                    <Image src={croppedImageResult.base64} alt="Vista previa recortada" layout="fill" className="object-contain" />
+                    <Image src={croppedImageResult.base64} alt="Vista previa recortada" width={croppedImageResult.width} height={croppedImageResult.height} className="object-contain h-full w-auto" />
                 ) : (
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                         <Upload className="w-8 h-8 mb-4 text-muted-foreground" />

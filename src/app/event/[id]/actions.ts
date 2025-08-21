@@ -53,7 +53,6 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
         case 'gallery':
           return { ...baseContent, type: 'gallery', images: data.images } as EventContent;
         default:
-          // Manejar tipos desconocidos o retornar null
           return null;
       }
     }).filter(item => item !== null) as EventContent[];
@@ -158,6 +157,44 @@ export async function addGalleryContentAction(
       return { error: `No se pudo guardar la galería: ${error.message}` };
     }
 }
+
+export async function deleteContentAction(
+  { eventId, contentId, contentType, imagePaths }: { eventId: string, contentId: string, contentType: EventContent['type'], imagePaths: string[] }
+): Promise<{ success?: boolean; error?: string }> {
+  if (!eventId || !contentId) {
+    return { error: 'Faltan datos para eliminar el contenido.' };
+  }
+
+  try {
+    // 1. Delete image(s) from Storage if applicable
+    if ((contentType === 'image' || contentType === 'gallery') && imagePaths.length > 0) {
+      for (const path of imagePaths) {
+        if (path) {
+           try {
+              const imageRef = ref(storage, path);
+              await deleteObject(imageRef);
+            } catch (storageError: any) {
+              // Ignore 'object-not-found' errors, as it might have been deleted already
+              if (storageError.code !== 'storage/object-not-found') {
+                console.warn(`No se pudo eliminar la imagen ${path}: ${storageError.message}`);
+              }
+            }
+        }
+      }
+    }
+
+    // 2. Delete the content document from Firestore
+    await deleteDoc(doc(db, 'events', eventId, 'content', contentId));
+
+    revalidatePath(`/event/${eventId}`);
+    return { success: true };
+
+  } catch (error: any) {
+    console.error("Error deleting content:", error);
+    return { error: `No se pudo eliminar el contenido: ${error.message}` };
+  }
+}
+
 
 export async function deleteEventAction(
     { id, imagePath }: { id: string; imagePath: string; }

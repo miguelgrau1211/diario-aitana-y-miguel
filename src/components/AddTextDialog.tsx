@@ -87,7 +87,7 @@ export function AddTextDialog({ isOpen, setIsOpen, eventId, onTextAdded, addOpti
           disabled={isSubmitting}
         />
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSubmitting}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Guardar Texto

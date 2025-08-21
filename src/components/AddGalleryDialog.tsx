@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addGalleryContentAction } from '@/app/event/[id]/actions';
 import { Loader2, Upload, X } from 'lucide-react';
 import Image from 'next/image';
-import type { EventContent } from '@/types';
+import type { EventContent, GalleryImage } from '@/types';
 import { CropDialog } from './CropDialog';
 
 interface AddGalleryDialogProps {
@@ -138,7 +138,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, eventId, onGalleryAdded, a
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
             {croppedImages.map((img, index) => (
                 <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
-                    <Image src={img.base64} alt={`Previsualización ${index+1}`} fill className="object-cover" />
+                    <Image src={img.base64} alt={`Previsualización ${index+1}`} width={img.width} height={img.height} className="object-cover w-full h-full" />
                     <Button
                         variant="destructive"
                         size="icon"

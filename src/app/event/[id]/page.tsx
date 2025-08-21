@@ -4,10 +4,10 @@
 import { useEffect, useState, useOptimistic, startTransition, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent } from '@/types';
-import { getEventAction, getEventContentAction, deleteEventAction } from './actions';
+import { getEventAction, getEventContentAction, deleteEventAction, deleteContentAction } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
@@ -28,6 +28,26 @@ import { AddContentControl } from '@/components/AddContentControl';
 import { cn } from '@/lib/utils';
 import { AddGalleryDialog } from '@/components/AddGalleryDialog';
 
+
+type OptimisticUpdate = {
+  item: EventContent;
+  type: 'add' | 'remove';
+};
+
+function optimisticContentReducer(
+  state: EventContent[],
+  update: OptimisticUpdate
+): EventContent[] {
+  switch (update.type) {
+    case 'add':
+      return [...state, update.item];
+    case 'remove':
+      return state.filter(item => item.id !== update.item.id);
+    default:
+      return state;
+  }
+}
+
 export default function EventDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -35,21 +55,21 @@ export default function EventDetailPage() {
   
   const [event, setEvent] = useState<DiaryEvent | null>(null);
   const [content, setContent] = useState<EventContent[]>([]);
+
   const [optimisticContent, setOptimisticContent] = useOptimistic(
     content,
-    (state: EventContent[], newContent: EventContent) => [
-      ...state,
-      newContent
-    ]
+    optimisticContentReducer
   );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDeleting, startDeleteTransition] = useTransition();
+  const [isDeletingEvent, startDeleteEventTransition] = useTransition();
 
   const [isTextDialogOpen, setTextDialogOpen] = useState(false);
   const [isImageDialogOpen, setImageDialogOpen] = useState(false);
   const [isGalleryDialogOpen, setGalleryDialogOpen] = useState(false);
+  
+  const [isContentActionPending, startContentActionTransition] = useTransition();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -94,11 +114,6 @@ export default function EventDetailPage() {
     }
   }, [id, router, toast]);
 
-  const handleAddOptimisticContent = (item: EventContent) => {
-    startTransition(() => {
-      setOptimisticContent(item);
-    });
-  };
 
   const handleContentAdded = async () => {
      if (id) {
@@ -111,10 +126,10 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleEventDelete = async () => {
     if (!event) return;
     
-    startDeleteTransition(async () => {
+    startDeleteEventTransition(async () => {
         try {
             const result = await deleteEventAction({ id: event.id, imagePath: event.imagePath });
             if (result?.error) {
@@ -135,6 +150,39 @@ export default function EventDetailPage() {
     });
   };
 
+  const handleContentDelete = async (itemToDelete: EventContent) => {
+    startContentActionTransition(async () => {
+      setOptimisticContent({ item: itemToDelete, type: 'remove' });
+
+      const imagePaths = itemToDelete.type === 'image' ? [itemToDelete.imagePath] 
+                       : itemToDelete.type === 'gallery' ? itemToDelete.images.map(img => img.imagePath)
+                       : [];
+      
+      const result = await deleteContentAction({
+        eventId: id,
+        contentId: itemToDelete.id,
+        contentType: itemToDelete.type,
+        imagePaths: imagePaths
+      });
+
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error al eliminar contenido',
+          description: result.error,
+        });
+        // Revert optimistic update on failure
+        await handleContentAdded();
+      } else {
+        toast({
+          title: 'Contenido eliminado',
+        });
+        // Sync server state with optimistic state
+        setContent(current => current.filter(item => item.id !== itemToDelete.id));
+      }
+    });
+  };
+
   if (loading) {
     return (
         <div className="flex flex-col min-h-screen">
@@ -151,6 +199,37 @@ export default function EventDetailPage() {
   }
   
   const renderContentItem = (item: EventContent) => {
+    const contentControls = (
+      <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="icon" className="h-8 w-8">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Seguro que quieres eliminar esto?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción es irreversible y eliminará este contenido del recuerdo.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isContentActionPending}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => handleContentDelete(item)}
+                disabled={isContentActionPending}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {isContentActionPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+
     switch(item.type) {
       case 'text':
         return (
@@ -161,6 +240,7 @@ export default function EventDetailPage() {
       case 'image':
         return (
           <div className="w-full relative rounded-lg overflow-hidden shadow-lg">
+             {contentControls}
             {item.width && item.height ? (
                 <Image 
                     src={item.value} 
@@ -183,18 +263,21 @@ export default function EventDetailPage() {
         );
       case 'gallery':
         return (
-            <div className="flex gap-2 rounded-lg overflow-hidden shadow-lg">
-                {item.images.map((img, index) => (
-                    <div key={index} className="relative flex-1 aspect-[4/3]">
-                        <Image 
-                            src={img.value}
-                            alt={`Galería de recuerdos ${index + 1}`}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 33vw"
-                        />
-                    </div>
-                ))}
+            <div className="relative">
+              {contentControls}
+              <div className="flex gap-2 rounded-lg overflow-hidden shadow-lg">
+                  {item.images.map((img, index) => (
+                      <div key={index} className="relative flex-1" style={{aspectRatio: `${img.width} / ${img.height}`}}>
+                          <Image 
+                              src={img.value}
+                              alt={`Galería de recuerdos ${index + 1}`}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 50vw, 33vw"
+                          />
+                      </div>
+                  ))}
+              </div>
             </div>
         );
       default:
@@ -209,21 +292,21 @@ export default function EventDetailPage() {
         setIsOpen={setTextDialogOpen}
         eventId={id}
         onTextAdded={handleContentAdded}
-        addOptimisticContent={handleAddOptimisticContent}
+        addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
        />
         <AddImageDialog
             isOpen={isImageDialogOpen}
             setIsOpen={setImageDialogOpen}
             eventId={id}
             onImageAdded={handleContentAdded}
-            addOptimisticContent={handleAddOptimisticContent}
+            addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
         />
         <AddGalleryDialog
             isOpen={isGalleryDialogOpen}
             setIsOpen={setGalleryDialogOpen}
             eventId={id}
             onGalleryAdded={handleContentAdded}
-            addOptimisticContent={handleAddOptimisticContent}
+            addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
         />
 
        <Header />
@@ -263,13 +346,13 @@ export default function EventDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isDeletingEvent}>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                        onClick={handleDelete}
-                        disabled={isDeleting}
+                        onClick={handleEventDelete}
+                        disabled={isDeletingEvent}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isDeletingEvent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Sí, eliminar
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -294,7 +377,7 @@ export default function EventDetailPage() {
                  )}
 
                  {optimisticContent.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((item) => (
-                    <div key={item.id}>
+                    <div key={item.id} className="relative group">
                         {renderContentItem(item)}
                     </div>
                  ))}
