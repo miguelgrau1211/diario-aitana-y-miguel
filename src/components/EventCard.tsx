@@ -37,9 +37,18 @@ export function EventCard({ event }: EventCardProps) {
     e.stopPropagation();
     e.preventDefault();
 
+    if (!event.imagePath) {
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar",
+        description: "No se puede eliminar este recuerdo porque es antiguo y no tiene una ruta de imagen guardada. Por favor, créalo de nuevo.",
+      });
+      return;
+    }
+
     setIsDeleting(true);
     try {
-      const result = await deleteEventAction({ id: event.id, imageUrl: event.imageUrl });
+      const result = await deleteEventAction({ id: event.id, imagePath: event.imagePath });
       if (result?.error) {
         throw new Error(result.error);
       }

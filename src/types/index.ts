@@ -6,6 +6,7 @@ export interface DiaryEvent {
   title: string;
   description: string;
   imageUrl: string;
+  imagePath: string; // Ruta del archivo en Firebase Storage
   createdAt: Date;
 }
 

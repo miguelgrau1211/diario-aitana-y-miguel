@@ -30,7 +30,8 @@ export async function createEventAction(
 
   try {
     const { getDownloadURL, uploadString } = await import('firebase/storage');
-    const storageRef = ref(storage, `events/${Date.now()}_${title.replace(/\s+/g, '-')}.jpg`);
+    const imagePath = `events/${Date.now()}_${title.replace(/\s+/g, '-')}.jpg`;
+    const storageRef = ref(storage, imagePath);
     
     const base64Data = image.split(',')[1];
     
@@ -43,6 +44,7 @@ export async function createEventAction(
       title,
       description,
       imageUrl: downloadURL,
+      imagePath: imagePath, // Guardamos la ruta del archivo
       createdAt: date,
     });
   } catch (error: any) {
@@ -57,7 +59,7 @@ export async function createEventAction(
 
 
 export async function deleteEventAction(
-  { id, imageUrl }: { id: string; imageUrl: string; }
+  { id, imagePath }: { id: string; imagePath: string; }
 ): Promise<{ success?: boolean; error?: string }> {
   if (!id) {
     return { error: 'ID de evento faltante.' };
@@ -74,11 +76,13 @@ export async function deleteEventAction(
       // If content is an image, delete it from storage first
       if (contentData.type === 'image' && contentData.value) {
         try {
+          // Asumimos que contentData.value es una URL de descarga
+          // Intentamos obtener la referencia desde la URL (puede fallar si la URL no es de Firebase Storage)
           const imageRef = ref(storage, contentData.value);
           await deleteObject(imageRef);
         } catch (storageError: any) {
-            // Log if image not found, but don't stop the whole process
-            if (storageError.code !== 'storage/object-not-found') {
+            // Si la URL no es válida o el objeto no existe, lo ignoramos y continuamos
+            if (storageError.code !== 'storage/object-not-found' && storageError.code !== 'storage/invalid-argument') {
               console.warn(`Could not delete content image ${contentData.value}: ${storageError.message}`);
             }
         }
@@ -87,13 +91,13 @@ export async function deleteEventAction(
     }
 
     // 2. Delete the main event image from Storage
-    if (imageUrl) {
+    if (imagePath) {
         try {
-            const mainImageRef = ref(storage, imageUrl);
+            const mainImageRef = ref(storage, imagePath);
             await deleteObject(mainImageRef);
         } catch (storageError: any) {
              if (storageError.code !== 'storage/object-not-found') {
-                console.warn(`Could not delete main image ${imageUrl}: ${storageError.message}`);
+                console.warn(`Could not delete main image ${imagePath}: ${storageError.message}`);
              }
         }
     }

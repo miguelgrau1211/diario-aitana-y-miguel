@@ -41,6 +41,7 @@ export default function Home() {
           title: data.title,
           description: data.description,
           imageUrl: data.imageUrl,
+          imagePath: data.imagePath,
           // Convert timestamp to Date object right away
           createdAt: (data.createdAt as Timestamp).toDate(),
         } as DiaryEvent);
