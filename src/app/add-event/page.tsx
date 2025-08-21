@@ -6,14 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import ReactCrop, { type Crop, centerCrop } from 'react-image-crop';
+import type { Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { createEventAction } from './actions';
@@ -24,63 +23,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { CropDialog } from '@/components/CropDialog';
 
 interface CroppedImageResult {
     base64: string;
     width: number;
     height: number;
 }
-
-function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<CroppedImageResult> {
-    const canvas = document.createElement('canvas');
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    
-    const cropWidth = Math.floor(crop.width * scaleX);
-    const cropHeight = Math.floor(crop.height * scaleY);
-    
-    canvas.width = cropWidth;
-    canvas.height = cropHeight;
-    const ctx = canvas.getContext('2d');
-  
-    if (!ctx) {
-      return Promise.reject(new Error('Failed to get canvas context.'));
-    }
-  
-    ctx.drawImage(
-      image,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      cropWidth,
-      cropHeight
-    );
-  
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error('Canvas is empty'));
-            return;
-          }
-          const reader = new FileReader();
-          reader.addEventListener('load', () => resolve({
-              base64: reader.result as string,
-              width: cropWidth,
-              height: cropHeight,
-          }));
-          reader.addEventListener('error', (error) => reject(error));
-          reader.readAsDataURL(blob);
-        },
-        'image/jpeg',
-        0.95
-      );
-    });
-}
-
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: 'El título debe tener al menos 2 caracteres.' }).max(100),
@@ -103,10 +52,7 @@ export default function AddEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [isCropModalOpen, setCropModalOpen] = useState(false);
-  const imageRef = useRef<HTMLImageElement>(null);
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -129,37 +75,13 @@ export default function AddEventPage() {
     }
   };
 
-  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
-    const initialCrop: Crop = {
-      unit: '%',
-      width: 90,
-      height: 90,
-      x: 5,
-      y: 5
-    };
-    const crop = centerCrop(initialCrop, width, height);
-    setCrop(crop);
-    setCompletedCrop(crop);
-  };
-
-  const handleCropConfirm = async () => {
-    if (completedCrop && imageRef.current) {
-      try {
-        const { base64, width, height } = await getCroppedImg(imageRef.current, completedCrop);
-        form.setValue('image', base64);
-        form.setValue('imageDimensions', { width, height });
-        setImageSrc(null);
-        setCropModalOpen(false);
-      } catch (error) {
-        console.error('Error cropping image:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error al recortar',
-          description: 'No se pudo procesar la imagen. Inténtalo de nuevo.',
-        });
-      }
+  const handleCropConfirm = async (result: CroppedImageResult | null) => {
+    if (result) {
+        form.setValue('image', result.base64);
+        form.setValue('imageDimensions', { width: result.width, height: result.height });
     }
+    setImageSrc(null);
+    setCropModalOpen(false);
   };
 
   const onSubmit = async (data: EventFormValues) => {
@@ -202,31 +124,12 @@ export default function AddEventPage() {
 
   return (
     <>
-      <Dialog open={isCropModalOpen} onOpenChange={setCropModalOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Recorta tu imagen</DialogTitle>
-          </DialogHeader>
-          {imageSrc && (
-             <div className="flex justify-center">
-                 <ReactCrop
-                    crop={crop}
-                    onChange={c => setCrop(c)}
-                    onComplete={c => setCompletedCrop(c)}
-                    minWidth={100}
-                    minHeight={100}
-                    className="max-h-[70vh]"
-                >
-                    <img ref={imageRef} alt="Crop me" src={imageSrc} onLoad={onImageLoad} />
-                </ReactCrop>
-             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCropModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCropConfirm}>Confirmar Recorte</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {imageSrc && (
+        <CropDialog 
+            imageSrc={imageSrc}
+            onConfirm={handleCropConfirm}
+        />
+      )}
 
       <div className="min-h-screen w-full flex flex-col items-center p-4 sm:p-6 lg:p-8">
         <Card className="w-full max-w-2xl">
