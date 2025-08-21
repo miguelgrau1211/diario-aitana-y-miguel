@@ -183,16 +183,9 @@ export default function EventDetailPage() {
         );
       case 'gallery':
         return (
-            <div className={cn(
-                "grid gap-2 rounded-lg overflow-hidden shadow-lg",
-                `grid-cols-${item.images.length === 4 ? 2 : item.images.length}`
-            )}>
+            <div className="flex gap-2 rounded-lg overflow-hidden shadow-lg">
                 {item.images.map((img, index) => (
-                    <div key={index} className={cn(
-                      "relative w-full",
-                      item.images.length === 3 && index === 0 && "row-span-2 col-span-2",
-                      "aspect-[4/3]"
-                    )}>
+                    <div key={index} className="relative flex-1 aspect-[4/3]">
                         <Image 
                             src={img.value}
                             alt={`Galería de recuerdos ${index + 1}`}
