@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface CroppedImageResult {
     base64: string;
@@ -162,4 +162,3 @@ export function CropDialog({ imageSrc, onConfirm, showSkipButton = false }: Crop
         </Dialog>
     );
 }
-
