@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { deleteEventAction } from "@/app/add-event/actions";
+import type { Timestamp } from "firebase/firestore";
 
 interface EventCardProps {
   event: DiaryEvent;
@@ -30,7 +31,7 @@ interface EventCardProps {
 export function EventCard({ event }: EventCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-  const eventDate = event.createdAt.toDate();
+  const eventDate = (event.createdAt as Timestamp).toDate();
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();

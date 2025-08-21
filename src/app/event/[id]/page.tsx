@@ -14,6 +14,7 @@ import { es } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
+import type { Timestamp } from 'firebase/firestore';
 
 export default function EventDetailPage() {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function EventDetailPage() {
     return null; // The user will be redirected by the effect hook
   }
   
-  const eventDate = event.createdAt.toDate();
+  const eventDate = (event.createdAt as Timestamp).toDate();
 
   return (
     <div className="flex flex-col min-h-screen">
