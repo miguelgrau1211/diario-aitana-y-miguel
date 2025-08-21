@@ -22,13 +22,11 @@ interface AddImageDialogProps {
 export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOptimisticContent }: AddImageDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
@@ -36,22 +34,24 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
       reader.readAsDataURL(file);
     } else {
       setPreviewImage(null);
-      setImageFile(null);
     }
   };
 
   const handleSubmit = async () => {
-    if (!previewImage || !imageFile) {
+    if (!previewImage) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se ha seleccionado ninguna imagen.' });
         return;
     }
 
     setIsSubmitting(true);
+    
+    // Optimistic update
     addOptimisticContent({
         id: `optimistic-${Date.now()}`,
         type: 'image',
         value: previewImage,
         createdAt: new Date(),
+        imagePath: null,
     });
     setIsOpen(false);
 
@@ -66,7 +66,6 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
       });
 
       setPreviewImage(null);
-      setImageFile(null);
       await onImageAdded();
 
     } catch (error: any) {
@@ -75,17 +74,18 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
         setIsSubmitting(false);
     }
   };
+  
+  const handleCloseDialog = (open: boolean) => {
+    if (!isSubmitting) {
+        setIsOpen(open);
+        if (!open) {
+            setPreviewImage(null);
+        }
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!isSubmitting) {
-            setIsOpen(open);
-            if (!open) {
-                setPreviewImage(null);
-                setImageFile(null);
-            }
-        }
-    }}>
+    <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Añadir una nueva foto</DialogTitle>
@@ -108,7 +108,7 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSubmitting}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || !previewImage}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Guardar Foto

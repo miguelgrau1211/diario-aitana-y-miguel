@@ -2,9 +2,10 @@
 'use server';
 
 import { db, storage } from '@/lib/firebase';
-import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, Timestamp, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, Timestamp, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import type { DiaryEvent, EventContent } from '@/types';
 
 export async function getEventAction(id: string): Promise<{ event?: Omit<DiaryEvent, 'createdAt'> & { createdAt: string }; error?: string }> {
@@ -18,7 +19,8 @@ export async function getEventAction(id: string): Promise<{ event?: Omit<DiaryEv
     if (docSnap.exists()) {
       const eventData = docSnap.data();
       const createdAt = (eventData.createdAt as Timestamp).toDate().toISOString();
-      return { event: { id: docSnap.id, ...eventData, createdAt } as Omit<DiaryEvent, 'createdAt'> & { createdAt: string } };
+      // Ensure imagePath is passed along, even if it's an empty string for older events
+      return { event: { id: docSnap.id, ...eventData, imagePath: eventData.imagePath || '', createdAt } as Omit<DiaryEvent, 'createdAt'> & { createdAt: string } };
     } else {
       return { error: 'No se encontró el recuerdo.' };
     }
@@ -41,6 +43,7 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
         id: doc.id,
         type: data.type,
         value: data.value,
+        imagePath: data.imagePath || null,
         createdAt: (data.createdAt as Timestamp).toDate(),
       } as EventContent;
     });
@@ -78,7 +81,8 @@ export async function addImageContentAction(
     return { error: 'Faltan datos para añadir la imagen.' };
   }
   try {
-    const storageRef = ref(storage, `events/${eventId}/content/${Date.now()}.jpg`);
+    const imagePath = `events/${eventId}/content/${Date.now()}.jpg`;
+    const storageRef = ref(storage, imagePath);
     const base64Data = imageBase64.split(',')[1];
     
     const snapshot = await uploadString(storageRef, base64Data, 'base64', {
@@ -89,6 +93,7 @@ export async function addImageContentAction(
     await addDoc(collection(db, 'events', eventId, 'content'), {
       type: 'image',
       value: downloadURL,
+      imagePath: imagePath,
       createdAt: serverTimestamp(),
     });
     
@@ -97,4 +102,56 @@ export async function addImageContentAction(
   } catch (error: any) {
     return { error: `No se pudo guardar la imagen: ${error.message}` };
   }
+}
+
+export async function deleteEventAction(
+  { id, imagePath }: { id: string; imagePath: string; }
+): Promise<{ success?: boolean; error?: string }> {
+  if (!id) {
+    return { error: 'ID de evento faltante.' };
+  }
+
+  try {
+    // 1. Delete content subcollection and its images
+    const contentCollectionRef = collection(db, 'events', id, 'content');
+    const contentSnapshot = await getDocs(query(contentCollectionRef));
+    
+    for (const contentDoc of contentSnapshot.docs) {
+      const contentData = contentDoc.data();
+      if (contentData.type === 'image' && contentData.imagePath) {
+        try {
+          const contentImageRef = ref(storage, contentData.imagePath);
+          await deleteObject(contentImageRef);
+        } catch (storageError: any) {
+          if (storageError.code !== 'storage/object-not-found') {
+            console.warn(`Could not delete content image ${contentData.imagePath}: ${storageError.message}`);
+          }
+        }
+      }
+      await deleteDoc(doc(db, 'events', id, 'content', contentDoc.id));
+    }
+
+    // 2. Delete the main event image from Storage
+    if (imagePath) {
+      try {
+        const mainImageRef = ref(storage, imagePath);
+        await deleteObject(mainImageRef);
+      } catch (storageError: any) {
+        if (storageError.code !== 'storage/object-not-found') {
+          console.warn(`Could not delete main image ${imagePath}: ${storageError.message}`);
+        }
+      }
+    }
+    
+    // 3. Delete the main event document from Firestore
+    await deleteDoc(doc(db, 'events', id));
+    
+  } catch (error: any) {
+    console.error('Error deleting event and its content:', error);
+    return { error: `Error al eliminar el recuerdo completo: ${error.message}` };
+  }
+
+  revalidatePath('/');
+  revalidatePath('/event');
+  redirect('/');
 }

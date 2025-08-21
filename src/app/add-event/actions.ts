@@ -44,7 +44,7 @@ export async function createEventAction(
       title,
       description,
       imageUrl: downloadURL,
-      imagePath: imagePath, // Guardamos la ruta del archivo
+      imagePath: imagePath,
       createdAt: date,
     });
   } catch (error: any) {
@@ -52,64 +52,6 @@ export async function createEventAction(
     return { error: `Failed to create event: ${error.message}` };
   }
   
-  revalidatePath('/');
-  revalidatePath('/event');
-  return { success: true };
-}
-
-
-export async function deleteEventAction(
-  { id, imagePath }: { id: string; imagePath: string; }
-): Promise<{ success?: boolean; error?: string }> {
-  if (!id) {
-    return { error: 'ID de evento faltante.' };
-  }
-
-  try {
-    // 1. Delete content subcollection
-    const contentCollectionRef = collection(db, 'events', id, 'content');
-    const contentQuery = query(contentCollectionRef);
-    const contentSnapshot = await getDocs(contentQuery);
-    
-    for (const contentDoc of contentSnapshot.docs) {
-      const contentData = contentDoc.data();
-      // If content is an image, delete it from storage first
-      if (contentData.type === 'image' && contentData.value) {
-        try {
-          // Asumimos que contentData.value es una URL de descarga
-          // Intentamos obtener la referencia desde la URL (puede fallar si la URL no es de Firebase Storage)
-          const imageRef = ref(storage, contentData.value);
-          await deleteObject(imageRef);
-        } catch (storageError: any) {
-            // Si la URL no es válida o el objeto no existe, lo ignoramos y continuamos
-            if (storageError.code !== 'storage/object-not-found' && storageError.code !== 'storage/invalid-argument') {
-              console.warn(`Could not delete content image ${contentData.value}: ${storageError.message}`);
-            }
-        }
-      }
-      await deleteDoc(doc(db, 'events', id, 'content', contentDoc.id));
-    }
-
-    // 2. Delete the main event image from Storage
-    if (imagePath) {
-        try {
-            const mainImageRef = ref(storage, imagePath);
-            await deleteObject(mainImageRef);
-        } catch (storageError: any) {
-             if (storageError.code !== 'storage/object-not-found') {
-                console.warn(`Could not delete main image ${imagePath}: ${storageError.message}`);
-             }
-        }
-    }
-    
-    // 3. Delete the main event document from Firestore
-    await deleteDoc(doc(db, 'events', id));
-    
-  } catch (error: any) {
-    console.error('Error deleting event and its content:', error);
-    return { error: `Error al eliminar el recuerdo completo: ${error.message}` };
-  }
-
   revalidatePath('/');
   revalidatePath('/event');
   return { success: true };

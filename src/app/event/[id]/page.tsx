@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useEffect, useState, useOptimistic, startTransition } from 'react';
+import { useEffect, useState, useOptimistic, startTransition, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { DiaryEvent, EventContent } from '@/types';
-import { getEventAction, getEventContentAction } from './actions';
+import { getEventAction, getEventContentAction, deleteEventAction } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ImagePlus, FileText } from 'lucide-react';
+import { ArrowLeft, ImagePlus, FileText, Trash2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
@@ -15,6 +15,17 @@ import { AddTextDialog } from '@/components/AddTextDialog';
 import { AddImageDialog } from '@/components/AddImageDialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function EventDetailPage() {
   const router = useRouter();
@@ -33,6 +44,7 @@ export default function EventDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, startDeleteTransition] = useTransition();
 
   const [isTextDialogOpen, setTextDialogOpen] = useState(false);
   const [isImageDialogOpen, setImageDialogOpen] = useState(false);
@@ -97,6 +109,31 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!event) return;
+    
+    startDeleteTransition(async () => {
+        try {
+            const result = await deleteEventAction({ id: event.id, imagePath: event.imagePath });
+            if (result?.error) {
+                throw new Error(result.error);
+            }
+            toast({
+                title: "Recuerdo eliminado",
+                description: "El momento ha sido eliminado para siempre de vuestro diario.",
+            });
+            // The server action will handle the redirect
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "No se pudo eliminar el recuerdo.";
+            toast({
+                variant: "destructive",
+                title: "Error al eliminar",
+                description: errorMessage,
+            });
+        }
+    });
+  };
+
   if (loading) {
     return (
         <div className="flex flex-col min-h-screen">
@@ -149,6 +186,35 @@ export default function EventDetailPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Volver
                 </Button>
+            </div>
+            <div className="absolute top-4 right-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="bg-destructive/80 hover:bg-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar Recuerdo
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Esto eliminará permanentemente el recuerdo y todo su contenido asociado (fotos y textos).
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Sí, eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
         </div>
         

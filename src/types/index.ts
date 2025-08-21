@@ -21,5 +21,6 @@ export interface EventContent {
   id: string;
   type: 'text' | 'image';
   value: string;
+  imagePath: string | null; // Ruta del archivo en Firebase Storage para imágenes
   createdAt: Date;
 }
