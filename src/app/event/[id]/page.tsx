@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useOptimistic, startTransition, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { DiaryEvent, EventContent } from '@/types';
+import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent } from '@/types';
 import { getEventAction, getEventContentAction, deleteEventAction } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AddContentControl } from '@/components/AddContentControl';
+import { cn } from '@/lib/utils';
+import { AddGalleryDialog } from '@/components/AddGalleryDialog';
 
 export default function EventDetailPage() {
   const router = useRouter();
@@ -47,6 +49,7 @@ export default function EventDetailPage() {
 
   const [isTextDialogOpen, setTextDialogOpen] = useState(false);
   const [isImageDialogOpen, setImageDialogOpen] = useState(false);
+  const [isGalleryDialogOpen, setGalleryDialogOpen] = useState(false);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -147,6 +150,54 @@ export default function EventDetailPage() {
     return null; // The user will be redirected by the effect hook
   }
   
+  const renderContentItem = (item: EventContent) => {
+    switch(item.type) {
+      case 'text':
+        return (
+          <div className="p-6 bg-secondary rounded-lg shadow-sm">
+            <p className="text-secondary-foreground whitespace-pre-wrap">{item.value}</p>
+          </div>
+        );
+      case 'image':
+        return (
+          <div className="w-full relative rounded-lg overflow-hidden shadow-lg">
+            <Image 
+              src={item.value} 
+              alt="Recuerdo" 
+              width={item.width}
+              height={item.height}
+              className="object-cover w-full h-auto"
+            />
+          </div>
+        );
+      case 'gallery':
+        return (
+            <div className={cn(
+                "grid gap-2 rounded-lg overflow-hidden shadow-lg",
+                `grid-cols-${item.images.length === 4 ? 2 : item.images.length}`
+            )}>
+                {item.images.map((img, index) => (
+                    <div key={index} className={cn(
+                      "relative w-full",
+                      item.images.length === 3 && index === 0 && "row-span-2 col-span-2",
+                      "aspect-[4/3]"
+                    )}>
+                        <Image 
+                            src={img.value}
+                            alt={`Galería de recuerdos ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 50vw, 33vw"
+                        />
+                    </div>
+                ))}
+            </div>
+        );
+      default:
+        return null;
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
        <AddTextDialog
@@ -161,6 +212,13 @@ export default function EventDetailPage() {
             setIsOpen={setImageDialogOpen}
             eventId={id}
             onImageAdded={handleContentAdded}
+            addOptimisticContent={handleAddOptimisticContent}
+        />
+        <AddGalleryDialog
+            isOpen={isGalleryDialogOpen}
+            setIsOpen={setGalleryDialogOpen}
+            eventId={id}
+            onGalleryAdded={handleContentAdded}
             addOptimisticContent={handleAddOptimisticContent}
         />
 
@@ -220,6 +278,7 @@ export default function EventDetailPage() {
             <AddContentControl 
               onAddImage={() => setImageDialogOpen(true)}
               onAddText={() => setTextDialogOpen(true)}
+              onAddGallery={() => setGalleryDialogOpen(true)}
             />
             
             <div className="space-y-8 mt-8">
@@ -232,22 +291,7 @@ export default function EventDetailPage() {
 
                  {optimisticContent.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((item) => (
                     <div key={item.id}>
-                        {item.type === 'text' && (
-                            <div className="p-6 bg-secondary rounded-lg shadow-sm">
-                                <p className="text-secondary-foreground whitespace-pre-wrap">{item.value}</p>
-                            </div>
-                        )}
-                        {item.type === 'image' && item.width && item.height && (
-                            <div className="w-full relative rounded-lg overflow-hidden shadow-lg">
-                                <Image 
-                                    src={item.value} 
-                                    alt="Recuerdo" 
-                                    width={item.width}
-                                    height={item.height}
-                                    className="object-cover w-full h-auto"
-                                />
-                            </div>
-                        )}
+                        {renderContentItem(item)}
                     </div>
                  ))}
             </div>

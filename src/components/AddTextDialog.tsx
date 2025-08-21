@@ -61,17 +61,19 @@ export function AddTextDialog({ isOpen, setIsOpen, eventId, onTextAdded, addOpti
         description: error.message,
       });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
 
+  const handleCloseDialog = (open: boolean) => {
+    if (!isSubmitting) {
+        setIsOpen(open);
+        if (!open) setText('');
+    }
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!isSubmitting) {
-            setIsOpen(open);
-            if (!open) setText('');
-        }
-    }}>
+    <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Añadir un nuevo texto</DialogTitle>

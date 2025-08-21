@@ -9,6 +9,7 @@ import { Plus, Image as ImageIcon, FileText, LayoutGrid } from 'lucide-react';
 interface AddContentControlProps {
   onAddText: () => void;
   onAddImage: () => void;
+  onAddGallery: () => void;
 }
 
 const menuItems = [
@@ -22,21 +23,21 @@ const menuItems = [
     icon: ImageIcon,
     action: 'onAddImage',
   },
-  // {
-  //   label: 'Galería',
-  //   icon: LayoutGrid,
-  //   action: 'onAddGallery',
-  //   disabled: true,
-  // },
+  {
+    label: 'Galería',
+    icon: LayoutGrid,
+    action: 'onAddGallery',
+  },
 ];
 
-export function AddContentControl({ onAddText, onAddImage }: AddContentControlProps) {
+export function AddContentControl({ onAddText, onAddImage, onAddGallery }: AddContentControlProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSelect = (action: string) => {
     setIsOpen(false);
     if (action === 'onAddText') onAddText();
     if (action === 'onAddImage') onAddImage();
+    if (action === 'onAddGallery') onAddGallery();
   };
 
   return (

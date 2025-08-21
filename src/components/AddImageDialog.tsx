@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addImageContentAction } from '@/app/event/[id]/actions';
 import { Loader2, Upload } from 'lucide-react';
 import Image from 'next/image';
-import type { EventContent } from '@/types';
+import type { EventContent, ImageContent } from '@/types';
 
 interface AddImageDialogProps {
   isOpen: boolean;
@@ -141,7 +141,7 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
         type: 'image',
         value: croppedImageResult.base64,
         createdAt: new Date(),
-        imagePath: null,
+        imagePath: '',
         width: croppedImageResult.width,
         height: croppedImageResult.height,
     });

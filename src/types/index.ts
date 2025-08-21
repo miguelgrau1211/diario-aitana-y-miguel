@@ -19,12 +19,38 @@ export interface NewDiaryEvent {
   date: Date;
 }
 
-export interface EventContent {
+// Base para todo el contenido
+interface BaseContent {
   id: string;
-  type: 'text' | 'image';
-  value: string;
-  imagePath: string | null; // Ruta del archivo en Firebase Storage para imágenes
   createdAt: Date;
-  width?: number;
-  height?: number;
 }
+
+// Tipos de contenido específicos
+export interface TextContent extends BaseContent {
+  type: 'text';
+  value: string;
+}
+
+export interface ImageContent extends BaseContent {
+  type: 'image';
+  value: string; // URL de la imagen
+  imagePath: string;
+  width: number;
+  height: number;
+}
+
+export interface GalleryImage {
+    value: string; // URL
+    imagePath: string;
+    width: number;
+    height: number;
+}
+
+export interface GalleryContent extends BaseContent {
+    type: 'gallery';
+    images: GalleryImage[];
+}
+
+
+// Unión discriminada de todos los tipos de contenido
+export type EventContent = TextContent | ImageContent | GalleryContent;
