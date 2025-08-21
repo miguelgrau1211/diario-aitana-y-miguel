@@ -21,14 +21,27 @@ export function EventCard({ event }: EventCardProps) {
       <Card className="w-full overflow-hidden h-full flex flex-col">
         <CardHeader className="p-0">
           <div className="relative w-full">
-            <Image
-              src={event.imageUrl}
-              alt={event.title}
-              width={event.width}
-              height={event.height}
-              className="object-cover w-full h-auto"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
+            {event.width && event.height ? (
+              <Image
+                src={event.imageUrl}
+                alt={event.title}
+                width={event.width}
+                height={event.height}
+                className="object-cover w-full h-auto"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            ) : (
+              // Fallback for old events without width/height
+              <div className="aspect-[4/3] w-full relative">
+                 <Image
+                    src={event.imageUrl}
+                    alt={event.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-4 flex-grow">

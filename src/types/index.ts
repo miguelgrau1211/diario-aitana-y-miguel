@@ -8,8 +8,8 @@ export interface DiaryEvent {
   imageUrl: string;
   imagePath: string; // Ruta del archivo en Firebase Storage
   createdAt: Date;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
 }
 
 export interface NewDiaryEvent {

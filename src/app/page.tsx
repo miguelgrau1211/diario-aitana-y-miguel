@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -29,7 +30,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return; // No cargar datos si no está autenticado
+    if (!isAuthenticated) return; // Nocargar datos si no está autenticado
 
     const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -44,7 +45,9 @@ export default function Home() {
           imagePath: data.imagePath,
           // Convert timestamp to Date object right away
           createdAt: (data.createdAt as Timestamp).toDate(),
-        } as DiaryEvent);
+          width: data.width,
+          height: data.height,
+        });
       });
       setEvents(eventsData);
       setLoading(false);
@@ -106,7 +109,7 @@ export default function Home() {
         ) : (
           <div className="text-center py-16">
             <h2 className="text-2xl font-semibold mb-2">No hay recuerdos aún</h2>
-            <p className="text-muted-foreground mb-4">¡Empieza a documentar tu historia de amor!</p>
+            <p className="text-muted-foreground mb-4">¡Empieza a documentartu historia de amor!</p>
             <Button asChild>
               <Link href="/add-event">
                 <Plus className="mr-2 h-4 w-4" />
