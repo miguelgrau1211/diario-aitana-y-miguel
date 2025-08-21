@@ -12,11 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { createEventAction } from './actions';
-import { generateTitleAction } from './actions';
-import { ArrowLeft, CalendarIcon, Loader2, Sparkles, Upload } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Loader2, Upload } from 'lucide-react';
 import Image from 'next/image';
-import { storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -38,7 +35,6 @@ export default function AddEventPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuggestingTitle, setIsSuggestingTitle] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const form = useForm<EventFormValues>({
@@ -51,54 +47,24 @@ export default function AddEventPage() {
     },
   });
 
-  const handleTitleSuggestion = async () => {
-    const description = form.getValues('description');
-    if (!description || description.length < 10) {
-      toast({
-        variant: 'destructive',
-        title: 'Descripción muy corta',
-        description: 'Por favor, escribe al menos 10 caracteres para sugerir un título.',
-      });
-      return;
-    }
-    setIsSuggestingTitle(true);
-    try {
-      const result = await generateTitleAction(description);
-      if (result.title) {
-        form.setValue('title', result.title);
-        toast({
-          title: 'Título sugerido',
-          description: 'Se ha generado un título para tu recuerdo.',
-        });
-      } else {
-        throw new Error(result.error || 'No se pudo generar el título.');
-      }
-    } catch (error) {
-       const errorMessage = error instanceof Error ? error.message : 'No se pudo sugerir un título. Inténtalo de nuevo.';
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: errorMessage,
-      });
-    } finally {
-      setIsSuggestingTitle(false);
-    }
-  };
-
   const onSubmit = async (data: EventFormValues) => {
     setIsSubmitting(true);
     
-    try {
-      const imageFile = data.image[0] as File;
-      
-      const storageRef = ref(storage, `events/${Date.now()}_${imageFile.name}`);
-      const snapshot = await uploadBytes(storageRef, imageFile);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+    if (!previewImage) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No se ha seleccionado ninguna imagen.',
+        });
+        setIsSubmitting(false);
+        return;
+    }
 
+    try {
       const result = await createEventAction({
         title: data.title,
         description: data.description,
-        imageUrl: downloadURL,
+        image: previewImage,
         date: data.date,
       });
       
@@ -146,15 +112,9 @@ export default function AddEventPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Título</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <FormControl>
-                        <Input placeholder="Un día inolvidable..." {...field} />
-                      </FormControl>
-                      <Button type="button" variant="outline" size="icon" onClick={handleTitleSuggestion} disabled={isSuggestingTitle}>
-                        {isSuggestingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                        <span className="sr-only">Sugerir Título</span>
-                      </Button>
-                    </div>
+                    <FormControl>
+                      <Input placeholder="Un día inolvidable..." {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -231,7 +191,7 @@ export default function AddEventPage() {
                                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                       <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
                                       <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Haz clic para subir</span> o arrastra y suelta</p>
-                                      <p className="text-xs text-muted-foreground">PNG, JPG o GIF</p>
+                                      <p className="text-xs text-muted-foreground">PNG, JPG, GIF o WEBP</p>
                                   </div>
                               )}
                               <Input id="dropzone-file" type="file" className="hidden" accept="image/*"

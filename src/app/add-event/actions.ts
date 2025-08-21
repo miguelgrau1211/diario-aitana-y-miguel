@@ -2,9 +2,10 @@
 
 import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db, storage } from '@/lib/firebase';
-import { addDoc, collection, deleteDoc, doc } from 'firebase/firestore';
-import { deleteObject, ref } from 'firebase/storage';
+import { addDoc, collection, deleteDoc, doc, getDoc } from 'firebase/firestore';
+import { deleteObject, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
+import type { DiaryEvent } from '@/types';
 
 export async function generateTitleAction(description: string) {
   try {
@@ -20,26 +21,37 @@ export async function generateTitleAction(description: string) {
 }
 
 export async function createEventAction(
-    { title, description, imageUrl, date }: { title: string; description: string; imageUrl: string; date: Date; }
+    { title, description, image, date }: { title: string; description: string; image: string; date: Date; }
   ): Promise<{ success?: boolean; error?: string }> {
 
-  if (!title || !description || !imageUrl || !date) {
+  if (!title || !description || !image || !date) {
     return { error: 'Missing required fields' };
   }
 
   try {
+    const storageRef = ref(storage, `events/${Date.now()}_${title.replace(/\s+/g, '-')}.jpg`);
+    
+    // The image is a data URI, so we need to extract the base64 part
+    const base64Data = image.split(',')[1];
+    
+    const snapshot = await uploadString(storageRef, base64Data, 'base64', {
+      contentType: 'image/jpeg',
+    });
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
     await addDoc(collection(db, 'events'), {
       title,
       description,
-      imageUrl: imageUrl,
+      imageUrl: downloadURL,
       createdAt: date,
     });
   } catch (error: any) {
-    console.error('Error creating event:', error);
+    console.error("Detailed Error in createEventAction:", error);
     return { error: `Failed to create event: ${error.message}` };
   }
   
   revalidatePath('/');
+  revalidatePath('/event');
   return { success: true };
 }
 
@@ -52,21 +64,17 @@ export async function deleteEventAction(
   }
 
   try {
-    // Primero, elimina la imagen de Firebase Storage
     if (imageUrl) {
       const imageRef = ref(storage, imageUrl);
       await deleteObject(imageRef);
     }
     
-    // Luego, elimina el documento de Firestore
     await deleteDoc(doc(db, 'events', id));
     
   } catch (error: any) {
     console.error('Error deleting event:', error);
-    // Proporciona un mensaje de error más específico si es posible
     if (error.code === 'storage/object-not-found') {
       console.warn('La imagen no se encontró en Storage, pero se eliminará el documento de Firestore.');
-      // Intenta eliminar el documento de todos modos
       try {
         await deleteDoc(doc(db, 'events', id));
       } catch (dbError: any) {
@@ -78,5 +86,25 @@ export async function deleteEventAction(
   }
 
   revalidatePath('/');
+  revalidatePath('/event');
   return { success: true };
+}
+
+export async function getEventAction(id: string): Promise<{ event?: DiaryEvent; error?: string }> {
+  if (!id) {
+    return { error: 'ID de evento faltante.' };
+  }
+  try {
+    const docRef = doc(db, 'events', id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return { event: { id: docSnap.id, ...docSnap.data() } as DiaryEvent };
+    } else {
+      return { error: 'No se encontró el recuerdo.' };
+    }
+  } catch (error: any) {
+    console.error('Error fetching event:', error);
+    return { error: `Error al obtener el recuerdo: ${error.message}` };
+  }
 }

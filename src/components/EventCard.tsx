@@ -2,6 +2,7 @@
 
 import type { DiaryEvent } from "@/types";
 import Image from "next/image";
+import Link from 'next/link';
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,10 @@ export function EventCard({ event }: EventCardProps) {
   const { toast } = useToast();
   const eventDate = event.createdAt.toDate();
 
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
     setIsDeleting(true);
     try {
       const result = await deleteEventAction({ id: event.id, imageUrl: event.imageUrl });
@@ -55,57 +59,72 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   return (
-    <Card className="w-full overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 duration-300 flex flex-col">
-      <CardHeader className="p-0">
-        <div className="aspect-video relative">
-          <Image
-            src={event.imageUrl}
-            alt={event.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 flex-grow">
-        <CardTitle className="font-headline text-xl mb-2">{event.title}</CardTitle>
-        <p className="text-muted-foreground text-sm line-clamp-3">{event.description}</p>
-      </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-between items-center">
-        <div className="flex items-center text-xs text-muted-foreground">
-          <Calendar className="mr-1.5 h-4 w-4" />
-          <time dateTime={eventDate.toISOString()}>
-            {format(eventDate, "d 'de' MMMM 'de' yyyy", { locale: es })}
-          </time>
-        </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-destructive/70 hover:text-destructive hover:bg-destructive/10">
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Eliminar Recuerdo</span>
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Esto eliminará permanentemente el recuerdo de vuestro diario.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+    <Link href={`/event/${event.id}`} className="block transition-all hover:shadow-lg hover:-translate-y-1 duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+      <Card className="w-full overflow-hidden h-full flex flex-col">
+        <CardHeader className="p-0">
+          <div className="aspect-video relative">
+            <Image
+              src={event.imageUrl}
+              alt={event.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 flex-grow">
+          <CardTitle className="font-headline text-xl mb-2">{event.title}</CardTitle>
+          <p className="text-muted-foreground text-sm line-clamp-3">{event.description}</p>
+        </CardContent>
+        <CardFooter className="p-4 pt-0 flex justify-between items-center">
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Calendar className="mr-1.5 h-4 w-4" />
+            <time dateTime={eventDate.toISOString()}>
+              {format(eventDate, "d 'de' MMMM 'de' yyyy", { locale: es })}
+            </time>
+          </div>
+          <AlertDialog onOpenChange={(open) => {
+            if (open) {
+              // Prevent link navigation when opening dialog
+              event.stopPropagation?.();
+            }
+          }}>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
               >
-                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardFooter>
-    </Card>
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Eliminar Recuerdo</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Esto eliminará permanentemente el recuerdo de vuestro diario.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Eliminar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardFooter>
+      </Card>
+    </Link>
   );
 }

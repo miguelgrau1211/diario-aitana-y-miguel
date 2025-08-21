@@ -7,3 +7,11 @@ export interface DiaryEvent {
   imageUrl: string;
   createdAt: Timestamp;
 }
+
+export interface NewDiaryEvent {
+  title: string;
+  description: string;
+  imageUrl: string;
+  createdAt?: Timestamp;
+  date: Date;
+}
