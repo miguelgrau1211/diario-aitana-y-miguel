@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { type Crop, centerCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
@@ -85,8 +85,6 @@ const eventFormSchema = z.object({
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
-const ASPECT_RATIO = 4 / 3;
-
 export default function AddEventPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -121,11 +119,14 @@ export default function AddEventPage() {
 
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const crop = centerCrop(
-      makeAspectCrop({ unit: '%', width: 90 }, ASPECT_RATIO, width, height),
-      width,
-      height
-    );
+    const initialCrop: Crop = {
+      unit: '%',
+      width: 90,
+      height: 90,
+      x: 5,
+      y: 5
+    };
+    const crop = centerCrop(initialCrop, width, height);
     setCrop(crop);
     setCompletedCrop(crop);
   };
@@ -197,7 +198,6 @@ export default function AddEventPage() {
                     crop={crop}
                     onChange={c => setCrop(c)}
                     onComplete={c => setCompletedCrop(c)}
-                    aspect={ASPECT_RATIO}
                     minWidth={100}
                     minHeight={100}
                     className="max-h-[70vh]"
@@ -341,3 +341,5 @@ export default function AddEventPage() {
     </>
   );
 }
+
+    

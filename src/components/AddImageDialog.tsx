@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { type Crop, centerCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,6 @@ interface AddImageDialogProps {
   onImageAdded: () => void;
   addOptimisticContent: (item: EventContent) => void;
 }
-
-const ASPECT_RATIO = 4 / 3;
 
 function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<string> {
     const canvas = document.createElement('canvas');
@@ -96,11 +94,14 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
 
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const crop = centerCrop(
-      makeAspectCrop({ unit: '%', width: 90 }, ASPECT_RATIO, width, height),
-      width,
-      height
-    );
+    const initialCrop: Crop = {
+      unit: '%',
+      width: 90,
+      height: 90,
+      x: 5,
+      y: 5
+    };
+    const crop = centerCrop(initialCrop, width, height);
     setCrop(crop);
     setCompletedCrop(crop);
   };
@@ -179,7 +180,6 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
                     crop={crop}
                     onChange={c => setCrop(c)}
                     onComplete={c => setCompletedCrop(c)}
-                    aspect={ASPECT_RATIO}
                     minWidth={100}
                     minHeight={100}
                     className="max-h-[70vh]"
@@ -224,3 +224,5 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
     </Dialog>
   );
 }
+
+    
