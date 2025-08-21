@@ -35,8 +35,8 @@ export interface ImageContent extends BaseContent {
   type: 'image';
   value: string; // URL de la imagen
   imagePath: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
 }
 
 export interface GalleryImage {

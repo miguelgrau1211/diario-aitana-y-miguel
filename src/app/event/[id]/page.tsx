@@ -161,13 +161,24 @@ export default function EventDetailPage() {
       case 'image':
         return (
           <div className="w-full relative rounded-lg overflow-hidden shadow-lg">
-            <Image 
-              src={item.value} 
-              alt="Recuerdo" 
-              width={item.width}
-              height={item.height}
-              className="object-cover w-full h-auto"
-            />
+            {item.width && item.height ? (
+                <Image 
+                    src={item.value} 
+                    alt="Recuerdo" 
+                    width={item.width}
+                    height={item.height}
+                    className="object-cover w-full h-auto"
+                />
+            ) : (
+                <div className="aspect-[4/3] w-full relative">
+                    <Image
+                        src={item.value}
+                        alt="Recuerdo"
+                        fill
+                        className="object-cover"
+                    />
+                </div>
+            )}
           </div>
         );
       case 'gallery':
@@ -253,7 +264,7 @@ export default function EventDetailPage() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                        <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
                         <AlertDialogDescription>
                         Esta acción no se puede deshacer. Esto eliminará permanentemente el recuerdo y todo su contenido asociado (fotos y textos).
                         </AlertDialogDescription>
