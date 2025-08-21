@@ -7,7 +7,7 @@ import type { DiaryEvent, EventContent } from '@/types';
 import { getEventAction, getEventContentAction, deleteEventAction } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ImagePlus, FileText, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { AddContentControl } from '@/components/AddContentControl';
 
 export default function EventDetailPage() {
   const router = useRouter();
@@ -120,7 +121,6 @@ export default function EventDetailPage() {
                 title: "Recuerdo eliminado",
                 description: "El momento ha sido eliminado para siempre de vuestro diario.",
             });
-            // The server action will handle the redirect
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "No se pudo eliminar el recuerdo.";
             toast({
@@ -217,18 +217,12 @@ export default function EventDetailPage() {
         </div>
         
         <div className="max-w-4xl mx-auto p-4 md:p-8">
-            <div className="flex justify-center items-center gap-4 my-8 p-6 bg-muted rounded-lg border-2 border-dashed">
-                 <Button variant="outline" size="lg" onClick={() => setImageDialogOpen(true)}>
-                    <ImagePlus className="mr-2"/>
-                    Añadir Foto
-                </Button>
-                <Button variant="outline" size="lg" onClick={() => setTextDialogOpen(true)}>
-                    <FileText className="mr-2"/>
-                    Añadir Texto
-                </Button>
-            </div>
+            <AddContentControl 
+              onAddImage={() => setImageDialogOpen(true)}
+              onAddText={() => setTextDialogOpen(true)}
+            />
             
-            <div className="space-y-8">
+            <div className="space-y-8 mt-8">
                  {optimisticContent.length === 0 && !loading && (
                     <div className="text-center py-16 text-muted-foreground">
                         <p>Comienza a construir este recuerdo...</p>
