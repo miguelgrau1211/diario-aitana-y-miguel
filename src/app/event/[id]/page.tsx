@@ -7,11 +7,8 @@ import type { DiaryEvent } from '@/types';
 import { getEventAction } from '@/app/add-event/actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, ImagePlus, FileText } from 'lucide-react';
 import Image from 'next/image';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
 
@@ -36,7 +33,6 @@ export default function EventDetailPage() {
             throw new Error(result.error);
           }
           if (result.event) {
-            // Convert ISO string back to Date object
             const eventData = {
               ...result.event,
               createdAt: new Date(result.event.createdAt),
@@ -79,43 +75,52 @@ export default function EventDetailPage() {
     return null; // The user will be redirected by the effect hook
   }
   
-  const eventDate = event.createdAt;
-
   return (
     <div className="flex flex-col min-h-screen">
        <Header />
-       <main className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-8">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver a todos los recuerdos
-          </Button>
+       <main className="flex-1 w-full">
+        <div className="relative h-64 md:h-80 w-full">
+            <Image
+                src={event.imageUrl}
+                alt={event.title}
+                fill
+                className="object-cover"
+                priority
+            />
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center p-4">
+                <h1 className="text-4xl md:text-6xl font-headline font-bold text-white text-center drop-shadow-lg">
+                    {event.title}
+                </h1>
+            </div>
+             <div className="absolute top-4 left-4">
+                <Button variant="ghost" onClick={() => router.back()} className="bg-black/20 text-white hover:bg-black/50 hover:text-white">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver
+                </Button>
+            </div>
         </div>
-        <Card className="overflow-hidden">
-          <CardHeader className="p-0">
-             <div className="aspect-video relative w-full">
-                <Image
-                    src={event.imageUrl}
-                    alt={event.title}
-                    fill
-                    className="object-cover"
-                    priority
-                />
+        
+        <div className="max-w-4xl mx-auto p-4 md:p-8">
+            <div className="flex justify-center items-center gap-4 my-8 p-6 bg-muted rounded-lg border-2 border-dashed">
+                 <Button variant="outline" size="lg">
+                    <ImagePlus className="mr-2"/>
+                    Añadir Foto
+                </Button>
+                <Button variant="outline" size="lg">
+                    <FileText className="mr-2"/>
+                    Añadir Texto
+                </Button>
             </div>
-          </CardHeader>
-          <CardContent className="p-6 md:p-8">
-            <CardTitle className="font-headline text-3xl md:text-4xl mb-4">{event.title}</CardTitle>
-            <div className="flex items-center text-md text-muted-foreground mb-6">
-                <Calendar className="mr-2 h-5 w-5" />
-                <time dateTime={eventDate.toISOString()}>
-                    {format(eventDate, "d 'de' MMMM 'de' yyyy", { locale: es })}
-                </time>
+            
+            {/* Aquí se mostrará el contenido del recuerdo (fotos, textos, etc.) */}
+            <div className="space-y-8">
+                 <div className="text-center py-16 text-muted-foreground">
+                    <p>Comienza a construir este recuerdo...</p>
+                    <p className="text-sm">Añade fotos y textos para contar la historia completa.</p>
+                </div>
             </div>
-            <div className="prose prose-lg max-w-none text-foreground whitespace-pre-wrap">
-                {event.description}
-            </div>
-          </CardContent>
-        </Card>
+
+        </div>
       </main>
     </div>
   );
