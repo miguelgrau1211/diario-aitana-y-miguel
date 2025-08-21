@@ -13,8 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
 import { AddTextDialog } from '@/components/AddTextDialog';
 import { AddImageDialog } from '@/components/AddImageDialog';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -256,9 +254,6 @@ export default function EventDetailPage() {
                                 />
                             </div>
                         )}
-                         <p className="text-xs text-muted-foreground mt-2 text-right">
-                            {format(new Date(item.createdAt), "d 'de' MMMM, HH:mm", { locale: es })}
-                        </p>
                     </div>
                  ))}
             </div>
