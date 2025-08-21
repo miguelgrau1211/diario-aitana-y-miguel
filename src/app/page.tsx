@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { DiaryEvent } from '@/types';
 import { Header } from '@/components/Header';
@@ -35,7 +35,15 @@ export default function Home() {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const eventsData: DiaryEvent[] = [];
       querySnapshot.forEach((doc) => {
-        eventsData.push({ id: doc.id, ...doc.data() } as DiaryEvent);
+        const data = doc.data();
+        eventsData.push({ 
+          id: doc.id,
+          title: data.title,
+          description: data.description,
+          imageUrl: data.imageUrl,
+          // Convert timestamp to Date object right away
+          createdAt: (data.createdAt as Timestamp).toDate(),
+        } as DiaryEvent);
       });
       setEvents(eventsData);
       setLoading(false);
@@ -57,7 +65,7 @@ export default function Home() {
       return events;
     }
     return events.filter((event) => {
-      const eventDate = format(event.createdAt.toDate(), "d 'de' MMMM 'de' yyyy", { locale: es });
+      const eventDate = format(event.createdAt, "d 'de' MMMM 'de' yyyy", { locale: es });
       return (
         event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         eventDate.toLowerCase().includes(searchQuery.toLowerCase())

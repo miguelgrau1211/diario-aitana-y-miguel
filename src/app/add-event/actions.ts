@@ -2,7 +2,7 @@
 
 import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db, storage } from '@/lib/firebase';
-import { addDoc, collection, deleteDoc, doc, getDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { deleteObject, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 import type { DiaryEvent } from '@/types';
@@ -90,7 +90,7 @@ export async function deleteEventAction(
   return { success: true };
 }
 
-export async function getEventAction(id: string): Promise<{ event?: DiaryEvent; error?: string }> {
+export async function getEventAction(id: string): Promise<{ event?: Omit<DiaryEvent, 'createdAt'> & { createdAt: string }; error?: string }> {
   if (!id) {
     return { error: 'ID de evento faltante.' };
   }
@@ -99,7 +99,9 @@ export async function getEventAction(id: string): Promise<{ event?: DiaryEvent; 
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return { event: { id: docSnap.id, ...docSnap.data() } as DiaryEvent };
+      const eventData = docSnap.data();
+      const createdAt = (eventData.createdAt as Timestamp).toDate().toISOString();
+      return { event: { id: docSnap.id, ...eventData, createdAt } as Omit<DiaryEvent, 'createdAt'> & { createdAt: string } };
     } else {
       return { error: 'No se encontró el recuerdo.' };
     }
