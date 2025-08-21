@@ -25,34 +25,38 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-function getCroppedImg(image: HTMLImageElement, crop: Crop, fileName: string): Promise<string> {
+interface CroppedImageResult {
+    base64: string;
+    width: number;
+    height: number;
+}
+
+function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<CroppedImageResult> {
     const canvas = document.createElement('canvas');
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    canvas.width = crop.width;
-    canvas.height = crop.height;
+    
+    const cropWidth = Math.floor(crop.width * scaleX);
+    const cropHeight = Math.floor(crop.height * scaleY);
+    
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
     const ctx = canvas.getContext('2d');
   
     if (!ctx) {
       return Promise.reject(new Error('Failed to get canvas context.'));
     }
   
-    const pixelRatio = window.devicePixelRatio || 1;
-    canvas.width = crop.width * pixelRatio;
-    canvas.height = crop.height * pixelRatio;
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    ctx.imageSmoothingQuality = 'high';
-  
     ctx.drawImage(
       image,
       crop.x * scaleX,
       crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
+      cropWidth,
+      cropHeight,
       0,
       0,
-      crop.width,
-      crop.height
+      cropWidth,
+      cropHeight
     );
   
     return new Promise((resolve, reject) => {
@@ -63,7 +67,11 @@ function getCroppedImg(image: HTMLImageElement, crop: Crop, fileName: string): P
             return;
           }
           const reader = new FileReader();
-          reader.addEventListener('load', () => resolve(reader.result as string));
+          reader.addEventListener('load', () => resolve({
+              base64: reader.result as string,
+              width: cropWidth,
+              height: cropHeight,
+          }));
           reader.addEventListener('error', (error) => reject(error));
           reader.readAsDataURL(blob);
         },
@@ -81,6 +89,10 @@ const eventFormSchema = z.object({
   date: z.date({
     required_error: 'Se requiere una fecha para el recuerdo.',
   }),
+  imageDimensions: z.object({
+      width: z.number(),
+      height: z.number(),
+  }).optional(),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -134,8 +146,9 @@ export default function AddEventPage() {
   const handleCropConfirm = async () => {
     if (completedCrop && imageRef.current) {
       try {
-        const croppedImageBase64 = await getCroppedImg(imageRef.current, completedCrop, 'cropped-image.jpg');
-        form.setValue('image', croppedImageBase64);
+        const { base64, width, height } = await getCroppedImg(imageRef.current, completedCrop);
+        form.setValue('image', base64);
+        form.setValue('imageDimensions', { width, height });
         setImageSrc(null);
         setCropModalOpen(false);
       } catch (error) {
@@ -158,6 +171,8 @@ export default function AddEventPage() {
         description: data.description,
         image: data.image,
         date: data.date,
+        width: data.imageDimensions!.width,
+        height: data.imageDimensions!.height,
       });
       
       if (result?.error) {
@@ -304,9 +319,9 @@ export default function AddEventPage() {
                       <FormLabel>Imagen del Recuerdo</FormLabel>
                       <FormControl>
                          <div className="flex items-center justify-center w-full">
-                            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
+                            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
                                 {previewImage ? (
-                                    <Image src={previewImage} alt="Vista previa" fill className="object-cover" />
+                                    <Image src={previewImage} alt="Vista previa" layout="fill" className="object-contain" />
                                 ) : (
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                         <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
@@ -341,5 +356,3 @@ export default function AddEventPage() {
     </>
   );
 }
-
-    

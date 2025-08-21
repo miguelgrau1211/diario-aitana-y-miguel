@@ -19,7 +19,6 @@ export async function getEventAction(id: string): Promise<{ event?: Omit<DiaryEv
     if (docSnap.exists()) {
       const eventData = docSnap.data();
       const createdAt = (eventData.createdAt as Timestamp).toDate().toISOString();
-      // Ensure imagePath is passed along, even if it's an empty string for older events
       return { event: { id: docSnap.id, ...eventData, imagePath: eventData.imagePath || '', createdAt } as Omit<DiaryEvent, 'createdAt'> & { createdAt: string } };
     } else {
       return { error: 'No se encontró el recuerdo.' };
@@ -39,12 +38,15 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
     const querySnapshot = await getDocs(contentQuery);
     const content = querySnapshot.docs.map(doc => {
       const data = doc.data();
+      const createdAtTimestamp = data.createdAt as Timestamp;
       return {
         id: doc.id,
         type: data.type,
         value: data.value,
         imagePath: data.imagePath || null,
-        createdAt: (data.createdAt as Timestamp).toDate(),
+        createdAt: createdAtTimestamp ? createdAtTimestamp.toDate() : new Date(),
+        width: data.width,
+        height: data.height,
       } as EventContent;
     });
     return { content };
@@ -75,9 +77,9 @@ export async function addTextContentAction(
 }
 
 export async function addImageContentAction(
-  { eventId, imageBase64 }: { eventId: string; imageBase64: string }
+  { eventId, imageBase64, width, height }: { eventId: string; imageBase64: string; width: number; height: number; }
 ): Promise<{ success?: boolean; error?: string }> {
-  if (!eventId || !imageBase64) {
+  if (!eventId || !imageBase64 || !width || !height) {
     return { error: 'Faltan datos para añadir la imagen.' };
   }
   try {
@@ -95,6 +97,8 @@ export async function addImageContentAction(
       value: downloadURL,
       imagePath: imagePath,
       createdAt: serverTimestamp(),
+      width,
+      height,
     });
     
     revalidatePath(`/event/${eventId}`);

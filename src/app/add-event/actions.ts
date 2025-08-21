@@ -21,10 +21,10 @@ export async function generateTitleAction(description: string) {
 }
 
 export async function createEventAction(
-    { title, description, image, date }: { title: string; description: string; image: string; date: Date; }
+    { title, description, image, date, width, height }: { title: string; description: string; image: string; date: Date; width: number; height: number; }
   ): Promise<{ success?: boolean; error?: string }> {
 
-  if (!title || !description || !image || !date) {
+  if (!title || !description || !image || !date || !width || !height) {
     return { error: 'Missing required fields' };
   }
 
@@ -46,6 +46,8 @@ export async function createEventAction(
       imageUrl: downloadURL,
       imagePath: imagePath,
       createdAt: date,
+      width,
+      height,
     });
   } catch (error: any) {
     console.error("Detailed Error in createEventAction:", error);

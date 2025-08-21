@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { DiaryEvent } from "@/types";
@@ -13,19 +14,19 @@ interface EventCardProps {
 }
 
 export function EventCard({ event }: EventCardProps) {
-  // The date is now a Date object
   const eventDate = event.createdAt;
 
   return (
     <Link href={`/event/${event.id}`} className="block transition-all hover:shadow-lg hover:-translate-y-1 duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
       <Card className="w-full overflow-hidden h-full flex flex-col">
         <CardHeader className="p-0">
-          <div className="aspect-[4/3] relative">
+          <div className="relative w-full">
             <Image
               src={event.imageUrl}
               alt={event.title}
-              fill
-              className="object-cover"
+              width={event.width}
+              height={event.height}
+              className="object-cover w-full h-auto"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>

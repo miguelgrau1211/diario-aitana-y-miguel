@@ -168,7 +168,7 @@ export default function EventDetailPage() {
 
        <Header />
        <main className="flex-1 w-full">
-        <div className="relative aspect-[4/3] md:aspect-video w-full">
+        <div className="relative h-64 md:h-96 w-full">
             <Image
                 src={event.imageUrl}
                 alt={event.title}
@@ -238,20 +238,26 @@ export default function EventDetailPage() {
                     </div>
                  )}
 
-                 {optimisticContent.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map((item) => (
+                 {optimisticContent.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((item) => (
                     <div key={item.id}>
                         {item.type === 'text' && (
                             <div className="p-6 bg-secondary rounded-lg shadow-sm">
                                 <p className="text-secondary-foreground whitespace-pre-wrap">{item.value}</p>
                             </div>
                         )}
-                        {item.type === 'image' && (
-                            <div className="w-full aspect-[4/3] relative rounded-lg overflow-hidden shadow-lg">
-                                <Image src={item.value} alt="Recuerdo" fill className="object-cover" />
+                        {item.type === 'image' && item.width && item.height && (
+                            <div className="w-full relative rounded-lg overflow-hidden shadow-lg">
+                                <Image 
+                                    src={item.value} 
+                                    alt="Recuerdo" 
+                                    width={item.width}
+                                    height={item.height}
+                                    className="object-cover w-full h-auto"
+                                />
                             </div>
                         )}
                          <p className="text-xs text-muted-foreground mt-2 text-right">
-                            {format(item.createdAt, "d 'de' MMMM, HH:mm", { locale: es })}
+                            {format(new Date(item.createdAt), "d 'de' MMMM, HH:mm", { locale: es })}
                         </p>
                     </div>
                  ))}

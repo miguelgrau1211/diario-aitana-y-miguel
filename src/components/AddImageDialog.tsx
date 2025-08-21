@@ -22,34 +22,40 @@ interface AddImageDialogProps {
   addOptimisticContent: (item: EventContent) => void;
 }
 
-function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<string> {
+interface CroppedImageResult {
+    base64: string;
+    width: number;
+    height: number;
+}
+
+
+function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<CroppedImageResult> {
     const canvas = document.createElement('canvas');
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    canvas.width = crop.width;
-    canvas.height = crop.height;
+    
+    const cropWidth = Math.floor(crop.width * scaleX);
+    const cropHeight = Math.floor(crop.height * scaleY);
+    
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
+
     const ctx = canvas.getContext('2d');
   
     if (!ctx) {
       return Promise.reject(new Error('Failed to get canvas context.'));
     }
   
-    const pixelRatio = window.devicePixelRatio || 1;
-    canvas.width = crop.width * pixelRatio;
-    canvas.height = crop.height * pixelRatio;
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    ctx.imageSmoothingQuality = 'high';
-  
     ctx.drawImage(
       image,
       crop.x * scaleX,
       crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
+      cropWidth,
+      cropHeight,
       0,
       0,
-      crop.width,
-      crop.height
+      cropWidth,
+      cropHeight
     );
   
     return new Promise((resolve, reject) => {
@@ -60,7 +66,11 @@ function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<string> {
             return;
           }
           const reader = new FileReader();
-          reader.addEventListener('load', () => resolve(reader.result as string));
+          reader.addEventListener('load', () => resolve({
+              base64: reader.result as string,
+              width: cropWidth,
+              height: cropHeight,
+          }));
           reader.addEventListener('error', (error) => reject(error));
           reader.readAsDataURL(blob);
         },
@@ -76,7 +86,7 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const imageRef = useRef<HTMLImageElement>(null);
-  const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [croppedImageResult, setCroppedImageResult] = useState<CroppedImageResult | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,8 +119,8 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
   const handleCropConfirm = async () => {
     if (completedCrop && imageRef.current) {
         try {
-            const croppedImageBase64 = await getCroppedImg(imageRef.current, completedCrop);
-            setCroppedImage(croppedImageBase64);
+            const result = await getCroppedImg(imageRef.current, completedCrop);
+            setCroppedImageResult(result);
             setImageSrc(null); // Close the cropper view
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error al recortar', description: 'No se pudo procesar la imagen.' });
@@ -119,7 +129,7 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
   }
 
   const handleSubmit = async () => {
-    if (!croppedImage) {
+    if (!croppedImageResult) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se ha recortado ninguna imagen.' });
         return;
     }
@@ -129,14 +139,21 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
     addOptimisticContent({
         id: `optimistic-${Date.now()}`,
         type: 'image',
-        value: croppedImage,
+        value: croppedImageResult.base64,
         createdAt: new Date(),
         imagePath: null,
+        width: croppedImageResult.width,
+        height: croppedImageResult.height,
     });
     handleCloseDialog(false);
 
     try {
-      const result = await addImageContentAction({ eventId, imageBase64: croppedImage });
+      const result = await addImageContentAction({ 
+          eventId, 
+          imageBase64: croppedImageResult.base64,
+          width: croppedImageResult.width,
+          height: croppedImageResult.height,
+      });
       
       if (result.error) throw new Error(result.error);
       
@@ -159,7 +176,7 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
         setIsOpen(open);
         if (!open) {
             setImageSrc(null);
-            setCroppedImage(null);
+            setCroppedImageResult(null);
             setCrop(undefined);
             setCompletedCrop(undefined);
         }
@@ -189,9 +206,9 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
              </div>
         ) : (
             <div className="flex items-center justify-center w-full my-4">
-                <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
-                    {croppedImage ? (
-                        <Image src={croppedImage} alt="Vista previa recortada" fill className="object-cover" />
+                <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
+                    {croppedImageResult?.base64 ? (
+                        <Image src={croppedImageResult.base64} alt="Vista previa recortada" layout="fill" className="object-contain" />
                     ) : (
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
@@ -213,7 +230,7 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
           ) : (
             <>
                 <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSubmitting}>Cancelar</Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting || !croppedImage}>
+                <Button onClick={handleSubmit} disabled={isSubmitting || !croppedImageResult}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Guardar Foto
                 </Button>
@@ -224,5 +241,3 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
     </Dialog>
   );
 }
-
-    
