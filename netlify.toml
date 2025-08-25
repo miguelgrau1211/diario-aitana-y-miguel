@@ -1,5 +1,5 @@
 [build]
-  command = "npx --yes @genkit-ai/tools@latest genkit-next-plugin-pre-build && next build"
+  command = "npx genkit-next-plugin-pre-build && next build"
   publish = ".next"
 
 [build.environment]
