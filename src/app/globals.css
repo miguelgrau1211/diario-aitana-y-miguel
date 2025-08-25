@@ -99,7 +99,7 @@ body {
 }
 
 .floating-shape {
-  position: fixed;
+  position: absolute;
   display: block;
   bottom: -150px;
   animation: float 25s linear infinite;

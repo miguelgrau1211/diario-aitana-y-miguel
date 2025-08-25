@@ -85,7 +85,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen relative overflow-hidden">
       <ArtisticBackground />
       <Header />
       <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 z-10">
