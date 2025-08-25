@@ -4,9 +4,3 @@
 
 [build.environment]
   GENKIT_ENV = "production"
-
-[functions]
-  timeout = 120
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useOptimistic, startTransition, useTransition } from 'react';
+import { useEffect, useState, useOptimistic, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent } from '@/types';
 import { 
@@ -33,7 +33,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AddContentControl } from '@/components/AddContentControl';
 import { cn } from '@/lib/utils';
 import { AddGalleryDialog } from '@/components/AddGalleryDialog';
@@ -133,7 +132,11 @@ export default function EventDetailPage() {
         const contentResult = await getEventContentAction(id);
         if (contentResult.error) {
             toast({ variant: 'destructive', title: 'Error', description: contentResult.error });
-            setContent(current => current); // Revert optimistic update on error
+            setContent(current => {
+              // Manually revert optimistic update
+              setOptimisticContent({ type: 'add', item: current[current.length-1]});
+              return current;
+            });
         } else {
             setContent(contentResult.content || []);
         }
@@ -292,10 +295,7 @@ export default function EventDetailPage() {
           title: 'Error al eliminar contenido',
           description: result.error,
         });
-        setContent(currentContent => {
-          setOptimisticContent({item: optimisticItem, type: 'add'});
-          return currentContent;
-        });
+        setOptimisticContent({item: optimisticItem, type: 'add'});
       } else {
         toast({
           title: 'Contenido eliminado',
@@ -396,7 +396,7 @@ export default function EventDetailPage() {
                               alt={`Galería de recuerdos ${index + 1}`}
                               fill
                               className="object-cover"
-                              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                              sizes="(max-width: 768px) 50vw, 25vw"
                           />
                       </div>
                   ))}
