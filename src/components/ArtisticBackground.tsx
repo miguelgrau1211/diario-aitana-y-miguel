@@ -30,7 +30,7 @@ interface Shape {
 }
 
 const shapeComponents = [HeartIcon, FlowerIcon, SparkleIcon];
-const colors = ['hsl(var(--primary) / 0.2)', 'hsl(var(--accent) / 0.2)'];
+const colors = ['hsl(var(--primary) / 0.8)', 'hsl(var(--accent) / 0.8)'];
 
 
 export function ArtisticBackground() {
@@ -68,12 +68,8 @@ export function ArtisticBackground() {
         setShapes(generatedShapes);
     }, []);
 
-    if (shapes.length === 0) {
-        return null;
-    }
-
     return (
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-[-1]">
             {shapes.map(shape => (
                 <div key={shape.id} className="floating-shape" style={shape.style}>
                     <shape.component />

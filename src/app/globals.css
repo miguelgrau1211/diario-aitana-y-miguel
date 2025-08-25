@@ -102,10 +102,9 @@ body {
 }
 
 .floating-shape {
-  position: fixed;
+  position: absolute;
   display: block;
   bottom: -150px;
   animation: float 25s linear infinite;
-  z-index: -1;
-  color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary) / 0.8);
 }

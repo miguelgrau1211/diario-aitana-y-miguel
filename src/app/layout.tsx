@@ -22,9 +22,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased min-h-screen bg-background">
         <ArtisticBackground />
-        <div className="relative z-10">
-          {children}
-        </div>
+        {children}
         <Toaster />
       </body>
     </html>
