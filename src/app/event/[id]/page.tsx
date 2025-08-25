@@ -389,11 +389,20 @@ export default function EventDetailPage() {
             )}
           </div>
         );
-      case 'gallery':
+      case 'gallery': {
+        const imageCount = item.images.length;
+        const gridClasses = {
+            1: 'grid-cols-1',
+            2: 'grid-cols-2',
+            3: 'grid-cols-3',
+            default: 'grid-cols-2 md:grid-cols-4',
+        };
+        const gridClass = imageCount <= 3 ? gridClasses[imageCount] : gridClasses.default;
+
         return (
             <div className="relative group">
               {contentControls}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 rounded-lg overflow-hidden">
+              <div className={cn("grid gap-2 rounded-lg overflow-hidden", gridClass)}>
                   {item.images.map((img, index) => (
                       <div key={index} className="relative w-full" style={{aspectRatio: `${img.width} / ${img.height}`}}>
                           <Image 
@@ -401,13 +410,14 @@ export default function EventDetailPage() {
                               alt={`Galería de recuerdos ${index + 1}`}
                               fill
                               className="object-cover"
-                              sizes="(max-width: 768px) 50vw, 25vw"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                           />
                       </div>
                   ))}
               </div>
             </div>
         );
+      }
       case 'imageText':
         return (
             <div className="relative bg-secondary rounded-lg shadow-sm overflow-hidden group">
