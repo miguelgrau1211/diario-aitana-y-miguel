@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useOptimistic, startTransition, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent, GalleryImage } from '@/types';
+import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent } from '@/types';
 import { 
     getEventAction, 
     getEventContentAction, 
@@ -13,10 +13,11 @@ import {
     addImageContentAction,
     addGalleryContentAction,
     addImageTextContentAction,
+    generateVideoAction,
 } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, Loader2, Pencil } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2, Pencil, Film } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
@@ -33,11 +34,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddContentControl } from '@/components/AddContentControl';
 import { cn } from '@/lib/utils';
 import { AddGalleryDialog } from '@/components/AddGalleryDialog';
 import { AddImageTextDialog } from '@/components/AddImageTextDialog';
-
 
 type OptimisticUpdate = {
   item: EventContent;
@@ -50,7 +51,6 @@ function optimisticContentReducer(
 ): EventContent[] {
   switch (update.type) {
     case 'add':
-      // Ensure we don't add duplicates if server responds quickly
       if (state.find(item => item.id === update.item.id)) {
         return state;
       }
@@ -85,6 +85,9 @@ export default function EventDetailPage() {
   const [isImageTextDialogOpen, setImageTextDialogOpen] = useState(false);
   
   const [isContentActionPending, startContentActionTransition] = useTransition();
+  const [isGeneratingVideo, startVideoGenerationTransition] = useTransition();
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isVideoDialogOpen, setVideoDialogOpen] = useState(false);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -241,6 +244,20 @@ export default function EventDetailPage() {
      });
   };
 
+  const handleGenerateVideo = () => {
+    startVideoGenerationTransition(async () => {
+        toast({ title: 'Creando vuestro vídeo...', description: 'La IA está trabajando en vuestro recuerdo. Esto puede tardar hasta un minuto.' });
+        const result = await generateVideoAction(id);
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Error al crear el vídeo', description: result.error });
+        } else if (result.videoUrl) {
+            setVideoUrl(result.videoUrl);
+            setVideoDialogOpen(true);
+            toast({ title: '¡Vídeo listo!', description: 'Vuestro recuerdo en movimiento ha sido creado.' });
+        }
+    });
+  };
+
   const handleEventDelete = async () => {
     if (!event) return;
     
@@ -267,7 +284,8 @@ export default function EventDetailPage() {
 
   const handleContentDelete = async (itemToDelete: EventContent) => {
     startContentActionTransition(async () => {
-      setOptimisticContent({ item: itemToDelete, type: 'remove' });
+      const optimisticItem = { ...itemToDelete, id: itemToDelete.id || `optimistic-delete-${Date.now()}` };
+      setOptimisticContent({ item: optimisticItem, type: 'remove' });
 
       let imagePaths: string[] = [];
       if (itemToDelete.type === 'image' && itemToDelete.imagePath) {
@@ -291,13 +309,11 @@ export default function EventDetailPage() {
           title: 'Error al eliminar contenido',
           description: result.error,
         });
-        // Revert optimistic update on failure by re-syncing
         await syncContent();
       } else {
         toast({
           title: 'Contenido eliminado',
         });
-         // On success, we can simply update the state locally
         setContent(current => current.filter(item => item.id !== itemToDelete.id));
       }
     });
@@ -455,6 +471,20 @@ export default function EventDetailPage() {
             onSave={handleImageTextSubmit}
             isSaving={isContentActionPending}
         />
+         <Dialog open={isVideoDialogOpen} onOpenChange={setVideoDialogOpen}>
+            <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Vuestro Recuerdo en Vídeo</DialogTitle>
+                </DialogHeader>
+                {videoUrl && (
+                    <video key={videoUrl} controls autoPlay className="w-full rounded-lg">
+                        <source src={videoUrl} type="video/mp4" />
+                        Tu navegador no soporta el tag de vídeo.
+                    </video>
+                )}
+            </DialogContent>
+        </Dialog>
+
 
        <Header />
        <main className="flex-1 w-full">
@@ -477,12 +507,26 @@ export default function EventDetailPage() {
                     Volver
                 </Button>
             </div>
-            <div className="absolute top-4 right-4">
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={handleGenerateVideo}
+                disabled={isGeneratingVideo}
+                className="bg-secondary/80 hover:bg-secondary"
+              >
+                {isGeneratingVideo ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Film className="mr-2 h-4 w-4" />
+                )}
+                Crear Vídeo
+              </Button>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="bg-destructive/80 hover:bg-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar Recuerdo
+                    Eliminar
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
