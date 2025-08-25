@@ -49,10 +49,6 @@ export function ArtisticBackground() {
         setShapes(generatedShapes);
     }, []);
 
-    if (typeof window === 'undefined') {
-        return null;
-    }
-
     return (
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             {shapes.map(shape => (
