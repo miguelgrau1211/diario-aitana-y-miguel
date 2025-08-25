@@ -166,7 +166,8 @@ export async function addGalleryContentAction(
       
       revalidatePath(`/event/${eventId}`);
       return { success: true };
-    } catch (error: any) {
+    } catch (error: any)
+{
       console.error("Error adding gallery content:", error);
       return { error: `No se pudo guardar la galería: ${error.message}` };
     }

@@ -16,7 +16,7 @@ import { CropDialog, type CroppedImageResult } from './CropDialog';
 interface AddImageDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onSave: (imageData: { blob: Blob; width: number; height: number; objectUrl: string }) => void;
+  onSave: (imageData: CroppedImageResult) => void;
   isSaving: boolean;
 }
 

@@ -168,7 +168,7 @@ export default function EventDetailPage() {
         const optimisticItem: ImageContent = {
             id: `optimistic-${Date.now()}`,
             type: 'image',
-            value: imageData.base64,
+            value: imageData.objectUrl,
             createdAt: new Date(),
             imagePath: '',
             width: imageData.width,
@@ -176,7 +176,7 @@ export default function EventDetailPage() {
         };
         setOptimisticContent({ item: optimisticItem, type: 'add' });
 
-        const result = await addImageContentAction({ eventId: id, imageBase64: imageData.base64, width: imageData.width, height: imageData.height });
+        const result = await addImageContentAction({ eventId: id, imageBlob: imageData.blob, width: imageData.width, height: imageData.height });
         if (result.error) {
             toast({ variant: 'destructive', title: 'Error al subir la imagen', description: result.error });
         } else {
@@ -188,12 +188,13 @@ export default function EventDetailPage() {
 
   const handleGallerySubmit = (images: CroppedImageResult[]) => {
     startContentActionTransition(async () => {
+      const objectUrls = images.map(img => img.objectUrl);
       const optimisticItem: GalleryContent = {
           id: `optimistic-${Date.now()}`,
           type: 'gallery',
           createdAt: new Date(),
-          images: images.map(img => ({
-              value: img.base64,
+          images: images.map((img, index) => ({
+              value: objectUrls[index],
               imagePath: '',
               width: img.width,
               height: img.height,
@@ -201,13 +202,16 @@ export default function EventDetailPage() {
       };
       setOptimisticContent({ item: optimisticItem, type: 'add' });
 
-      const result = await addGalleryContentAction({ eventId: id, images: images.map(img => ({base64: img.base64, width: img.width, height: img.height})) });
+      const imageBlobs = images.map(img => ({ blob: img.blob, width: img.width, height: img.height }));
+
+      const result = await addGalleryContentAction({ eventId: id, images: imageBlobs });
        if (result.error) {
             toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
         } else {
             toast({ title: '¡Galería añadida!', description: 'Vuestras fotos han sido añadidas al recuerdo.' });
         }
         await syncContent();
+        objectUrls.forEach(url => URL.revokeObjectURL(url));
     });
   };
 
@@ -217,7 +221,7 @@ export default function EventDetailPage() {
             id: `optimistic-${Date.now()}`,
             type: 'imageText',
             createdAt: new Date(),
-            imageUrl: data.image.base64,
+            imageUrl: data.image.objectUrl,
             imagePath: '',
             width: data.image.width,
             height: data.image.height,
@@ -228,7 +232,7 @@ export default function EventDetailPage() {
 
         const result = await addImageTextContentAction({
             eventId: id,
-            imageBase64: data.image.base64,
+            imageBlob: data.image.blob,
             width: data.image.width,
             height: data.image.height,
             text: data.text,
@@ -241,6 +245,7 @@ export default function EventDetailPage() {
             toast({ title: '¡Contenido añadido!', description: 'La combinación de imagen y texto se ha guardado.' });
         }
         await syncContent();
+        URL.revokeObjectURL(data.image.objectUrl);
      });
   };
 
