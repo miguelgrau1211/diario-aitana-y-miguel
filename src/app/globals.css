@@ -86,3 +86,24 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.floating-shape {
+  position: fixed;
+  display: block;
+  bottom: -150px;
+  animation: float 25s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+  color: hsl(var(--primary) / 0.2);
+}

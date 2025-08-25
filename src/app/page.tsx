@@ -15,6 +15,7 @@ import { Plus, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PasswordProtect } from '@/components/PasswordProtect';
+import { ArtisticBackground } from '@/components/ArtisticBackground';
 
 export default function Home() {
   const [events, setEvents] = useState<DiaryEvent[]>([]);
@@ -23,14 +24,15 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Verificar si ya está autenticado en la sesión del navegador
-    if (sessionStorage.getItem('isAuthenticated') === 'true') {
-      setIsAuthenticated(true);
+    if (typeof window !== 'undefined') {
+      if (sessionStorage.getItem('isAuthenticated') === 'true') {
+        setIsAuthenticated(true);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return; // Nocargar datos si no está autenticado
+    if (!isAuthenticated) return;
 
     const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -43,7 +45,6 @@ export default function Home() {
           description: data.description,
           imageUrl: data.imageUrl,
           imagePath: data.imagePath,
-          // Convert timestamp to Date object right away
           createdAt: (data.createdAt as Timestamp).toDate(),
           width: data.width,
           height: data.height,
@@ -60,7 +61,9 @@ export default function Home() {
   }, [isAuthenticated]);
 
   const handleAuthenticated = () => {
-    sessionStorage.setItem('isAuthenticated', 'true');
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('isAuthenticated', 'true');
+    }
     setIsAuthenticated(true);
   };
 
@@ -83,15 +86,16 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <ArtisticBackground />
       <Header />
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8">
+      <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 z-10">
         <div className="mb-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Buscar por título o fecha..."
-              className="pl-10 w-full md:w-1/2"
+              className="pl-10 w-full md:w-1/2 bg-background/80"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -119,7 +123,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <div className="md:hidden fixed bottom-6 right-6">
+      <div className="md:hidden fixed bottom-6 right-6 z-20">
         <Button asChild size="icon" className="rounded-full w-14 h-14 shadow-lg">
           <Link href="/add-event">
             <Plus className="h-6 w-6" />
