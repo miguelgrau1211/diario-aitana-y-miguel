@@ -13,11 +13,10 @@ import {
     addImageContentAction,
     addGalleryContentAction,
     addImageTextContentAction,
-    generateVideoAction,
 } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, Loader2, Pencil, Film } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2, Pencil, GalleryThumbnails } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
@@ -34,11 +33,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AddContentControl } from '@/components/AddContentControl';
 import { cn } from '@/lib/utils';
 import { AddGalleryDialog } from '@/components/AddGalleryDialog';
 import { AddImageTextDialog } from '@/components/AddImageTextDialog';
+import { CollageView } from '@/components/CollageView';
 
 type OptimisticUpdate = {
   item: EventContent;
@@ -85,9 +85,7 @@ export default function EventDetailPage() {
   const [isImageTextDialogOpen, setImageTextDialogOpen] = useState(false);
   
   const [isContentActionPending, startContentActionTransition] = useTransition();
-  const [isGeneratingVideo, startVideoGenerationTransition] = useTransition();
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [isVideoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [isCollageOpen, setCollageOpen] = useState(false);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -137,6 +135,7 @@ export default function EventDetailPage() {
         const contentResult = await getEventContentAction(id);
         if (contentResult.error) {
             toast({ variant: 'destructive', title: 'Error', description: contentResult.error });
+            setContent(current => current); // Revert optimistic update on error
         } else {
             setContent(contentResult.content || []);
         }
@@ -201,7 +200,7 @@ export default function EventDetailPage() {
       };
       setOptimisticContent({ item: optimisticItem, type: 'add' });
 
-      const result = await addGalleryContentAction({ eventId: id, images });
+      const result = await addGalleryContentAction({ eventId: id, images: images.map(img => ({base64: img.base64, width: img.width, height: img.height})) });
        if (result.error) {
             toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
         } else {
@@ -242,20 +241,6 @@ export default function EventDetailPage() {
         }
         await syncContent();
      });
-  };
-
-  const handleGenerateVideo = () => {
-    startVideoGenerationTransition(async () => {
-        toast({ title: 'Creando vuestro vídeo...', description: 'La IA está trabajando en vuestro recuerdo. Esto puede tardar hasta un minuto.' });
-        const result = await generateVideoAction(id);
-        if (result.error) {
-            toast({ variant: 'destructive', title: 'Error al crear el vídeo', description: result.error });
-        } else if (result.videoUrl) {
-            setVideoUrl(result.videoUrl);
-            setVideoDialogOpen(true);
-            toast({ title: '¡Vídeo listo!', description: 'Vuestro recuerdo en movimiento ha sido creado.' });
-        }
-    });
   };
 
   const handleEventDelete = async () => {
@@ -314,7 +299,8 @@ export default function EventDetailPage() {
         toast({
           title: 'Contenido eliminado',
         });
-        setContent(current => current.filter(item => item.id !== itemToDelete.id));
+        // We let the syncContent handle the state update to be sure
+        await syncContent();
       }
     });
   };
@@ -402,15 +388,15 @@ export default function EventDetailPage() {
         return (
             <div className="relative group">
               {contentControls}
-              <div className="flex gap-2 rounded-lg overflow-hidden shadow-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 rounded-lg overflow-hidden">
                   {item.images.map((img, index) => (
-                      <div key={index} className="relative flex-1" style={{aspectRatio: `${img.width} / ${img.height}`}}>
+                      <div key={index} className="relative w-full" style={{aspectRatio: `${img.width} / ${img.height}`}}>
                           <Image 
                               src={img.value}
                               alt={`Galería de recuerdos ${index + 1}`}
                               fill
                               className="object-cover"
-                              sizes="(max-width: 768px) 50vw, 33vw"
+                              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"
                           />
                       </div>
                   ))}
@@ -471,17 +457,17 @@ export default function EventDetailPage() {
             onSave={handleImageTextSubmit}
             isSaving={isContentActionPending}
         />
-         <Dialog open={isVideoDialogOpen} onOpenChange={setVideoDialogOpen}>
-            <DialogContent className="max-w-3xl">
+        <Dialog open={isCollageOpen} onOpenChange={setCollageOpen}>
+            <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>Vuestro Recuerdo en Vídeo</DialogTitle>
+                    <DialogTitle>{event.title}</DialogTitle>
+                    <DialogDescription>
+                       Un collage de vuestro recuerdo.
+                    </DialogDescription>
                 </DialogHeader>
-                {videoUrl && (
-                    <video key={videoUrl} controls autoPlay className="w-full rounded-lg">
-                        <source src={videoUrl} type="video/mp4" />
-                        Tu navegador no soporta el tag de vídeo.
-                    </video>
-                )}
+                <div className="flex-1 overflow-y-auto pr-2">
+                  <CollageView event={event} content={content} />
+                </div>
             </DialogContent>
         </Dialog>
 
@@ -510,16 +496,11 @@ export default function EventDetailPage() {
             <div className="absolute top-4 right-4 flex items-center gap-2">
               <Button
                 variant="secondary"
-                onClick={handleGenerateVideo}
-                disabled={isGeneratingVideo}
+                onClick={() => setCollageOpen(true)}
                 className="bg-secondary/80 hover:bg-secondary"
               >
-                {isGeneratingVideo ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Film className="mr-2 h-4 w-4" />
-                )}
-                Crear Vídeo
+                <GalleryThumbnails className="mr-2 h-4 w-4" />
+                Ver Collage
               </Button>
 
               <AlertDialog>

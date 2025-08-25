@@ -7,55 +7,6 @@ import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storag
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { DiaryEvent, EventContent, GalleryImage } from '@/types';
-import { generateVideo, GenerateVideoInput } from '@/ai/flows/generate-video';
-
-async function urlToDataUri(url: string): Promise<string> {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.statusText}`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    return `data:${contentType};base64,${buffer.toString('base64')}`;
-}
-
-export async function generateVideoAction(
-  eventId: string
-): Promise<{ videoUrl?: string; error?: string }> {
-  try {
-    const eventResult = await getEventAction(eventId);
-    if (eventResult.error || !eventResult.event) {
-        throw new Error(eventResult.error || 'Event not found');
-    }
-    
-    const contentResult = await getEventContentAction(eventId);
-    if (contentResult.error) {
-        throw new Error(contentResult.error);
-    }
-
-    const textContent: string[] = (contentResult.content || [])
-        .filter(c => c.type === 'text' || c.type === 'imageText')
-        .map(c => (c.type === 'text' ? c.value : c.text));
-
-    const mainImageB64 = await urlToDataUri(eventResult.event.imageUrl);
-
-    const videoInput: GenerateVideoInput = {
-        title: eventResult.event.title,
-        description: eventResult.event.description,
-        mainImage: mainImageB64,
-        content: textContent,
-    };
-    
-    const result = await generateVideo(videoInput);
-
-    return { videoUrl: result.videoUrl };
-
-  } catch (error: any) {
-    console.error('Error generating video:', error);
-    return { error: `No se pudo generar el vídeo: ${error.message}` };
-  }
-}
 
 export async function getEventAction(id: string): Promise<{ event?: Omit<DiaryEvent, 'createdAt'> & { createdAt: string }; error?: string }> {
   if (!id) {
