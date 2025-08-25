@@ -108,19 +108,3 @@ body {
   animation: float 25s linear infinite;
   color: hsl(var(--primary) / 0.8);
 }
-
-@keyframes kenburns {
-  0% {
-    transform: scale(1) translate(0, 0);
-  }
-  50% {
-    transform: scale(1.1) translate(-2%, 2%);
-  }
-  100% {
-    transform: scale(1) translate(0, 0);
-  }
-}
-
-.ken-burns-effect {
-  animation: kenburns 8s ease-in-out infinite;
-}

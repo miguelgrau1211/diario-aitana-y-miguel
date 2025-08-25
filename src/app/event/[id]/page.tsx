@@ -16,7 +16,7 @@ import {
 } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, Loader2, Pencil, GalleryThumbnails, Film } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2, Pencil, GalleryThumbnails } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
@@ -38,7 +38,6 @@ import { AddContentControl } from '@/components/AddContentControl';
 import { cn } from '@/lib/utils';
 import { AddGalleryDialog } from '@/components/AddGalleryDialog';
 import { AddImageTextDialog } from '@/components/AddImageTextDialog';
-import { VideoPlayer } from '@/components/VideoPlayer';
 
 type OptimisticUpdate = {
   item: EventContent;
@@ -85,7 +84,6 @@ export default function EventDetailPage() {
   const [isImageTextDialogOpen, setImageTextDialogOpen] = useState(false);
   
   const [isContentActionPending, startContentActionTransition] = useTransition();
-  const [isVideoPlayerOpen, setVideoPlayerOpen] = useState(false);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -459,12 +457,6 @@ export default function EventDetailPage() {
             onSave={handleImageTextSubmit}
             isSaving={isContentActionPending}
         />
-        <Dialog open={isVideoPlayerOpen} onOpenChange={setVideoPlayerOpen}>
-            <DialogContent className="max-w-4xl w-full aspect-video p-0 border-0">
-                 <VideoPlayer event={event} content={content} />
-            </DialogContent>
-        </Dialog>
-
 
        <Header />
        <main className="flex-1 w-full">
@@ -488,15 +480,6 @@ export default function EventDetailPage() {
                 </Button>
             </div>
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => setVideoPlayerOpen(true)}
-                className="bg-secondary/80 hover:bg-secondary"
-              >
-                <Film className="mr-2 h-4 w-4" />
-                Crear Vídeo
-              </Button>
-
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="bg-destructive/80 hover:bg-destructive">
