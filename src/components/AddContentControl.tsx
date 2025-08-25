@@ -4,12 +4,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Image as ImageIcon, FileText, LayoutGrid } from 'lucide-react';
+import { Plus, Image as ImageIcon, FileText, LayoutGrid, GalleryVertical } from 'lucide-react';
 
 interface AddContentControlProps {
   onAddText: () => void;
   onAddImage: () => void;
   onAddGallery: () => void;
+  onAddImageText: () => void;
 }
 
 const menuItems = [
@@ -28,9 +29,14 @@ const menuItems = [
     icon: LayoutGrid,
     action: 'onAddGallery',
   },
+   {
+    label: 'Imagen y Texto',
+    icon: GalleryVertical,
+    action: 'onAddImageText',
+  },
 ];
 
-export function AddContentControl({ onAddText, onAddImage, onAddGallery }: AddContentControlProps) {
+export function AddContentControl({ onAddText, onAddImage, onAddGallery, onAddImageText }: AddContentControlProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSelect = (action: string) => {
@@ -38,6 +44,7 @@ export function AddContentControl({ onAddText, onAddImage, onAddGallery }: AddCo
     if (action === 'onAddText') onAddText();
     if (action === 'onAddImage') onAddImage();
     if (action === 'onAddGallery') onAddGallery();
+    if (action === 'onAddImageText') onAddImageText();
   };
 
   return (

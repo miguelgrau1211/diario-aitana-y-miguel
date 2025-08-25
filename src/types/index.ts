@@ -51,6 +51,16 @@ export interface GalleryContent extends BaseContent {
     images: GalleryImage[];
 }
 
+export interface ImageTextContent extends BaseContent {
+  type: 'imageText';
+  text: string;
+  imageUrl: string;
+  imagePath: string;
+  width: number;
+  height: number;
+  imagePosition: 'left' | 'right';
+}
+
 
 // Unión discriminada de todos los tipos de contenido
-export type EventContent = TextContent | ImageContent | GalleryContent;
+export type EventContent = TextContent | ImageContent | GalleryContent | ImageTextContent;

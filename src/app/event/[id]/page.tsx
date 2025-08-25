@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useOptimistic, startTransition, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent } from '@/types';
+import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent } from '@/types';
 import { getEventAction, getEventContentAction, deleteEventAction, deleteContentAction } from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import {
 import { AddContentControl } from '@/components/AddContentControl';
 import { cn } from '@/lib/utils';
 import { AddGalleryDialog } from '@/components/AddGalleryDialog';
+import { AddImageTextDialog } from '@/components/AddImageTextDialog';
 
 
 type OptimisticUpdate = {
@@ -68,6 +69,7 @@ export default function EventDetailPage() {
   const [isTextDialogOpen, setTextDialogOpen] = useState(false);
   const [isImageDialogOpen, setImageDialogOpen] = useState(false);
   const [isGalleryDialogOpen, setGalleryDialogOpen] = useState(false);
+  const [isImageTextDialogOpen, setImageTextDialogOpen] = useState(false);
   
   const [isContentActionPending, startContentActionTransition] = useTransition();
 
@@ -154,9 +156,14 @@ export default function EventDetailPage() {
     startContentActionTransition(async () => {
       setOptimisticContent({ item: itemToDelete, type: 'remove' });
 
-      const imagePaths = itemToDelete.type === 'image' ? [itemToDelete.imagePath] 
-                       : itemToDelete.type === 'gallery' ? itemToDelete.images.map(img => img.imagePath)
-                       : [];
+      let imagePaths: string[] = [];
+      if (itemToDelete.type === 'image') {
+          imagePaths = [itemToDelete.imagePath];
+      } else if (itemToDelete.type === 'gallery') {
+          imagePaths = itemToDelete.images.map(img => img.imagePath);
+      } else if (itemToDelete.type === 'imageText') {
+          imagePaths = [itemToDelete.imagePath];
+      }
       
       const result = await deleteContentAction({
         eventId: id,
@@ -280,6 +287,29 @@ export default function EventDetailPage() {
               </div>
             </div>
         );
+      case 'imageText':
+        return (
+            <div className="relative bg-secondary rounded-lg shadow-sm overflow-hidden">
+                {contentControls}
+                <div className={cn(
+                    "grid grid-cols-1 md:grid-cols-2 gap-6 items-center",
+                    item.imagePosition === 'right' && "md:grid-flow-col-dense"
+                )}>
+                    <div className={cn("relative w-full h-full", item.imagePosition === 'right' && 'md:col-start-2')}>
+                        <Image
+                            src={item.imageUrl}
+                            alt="Recuerdo con texto"
+                            width={item.width}
+                            height={item.height}
+                            className="object-cover w-full h-full"
+                        />
+                    </div>
+                    <div className="p-6">
+                        <p className="text-secondary-foreground whitespace-pre-wrap">{item.text}</p>
+                    </div>
+                </div>
+            </div>
+        );
       default:
         return null;
     }
@@ -306,6 +336,13 @@ export default function EventDetailPage() {
             setIsOpen={setGalleryDialogOpen}
             eventId={id}
             onGalleryAdded={handleContentAdded}
+            addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
+        />
+        <AddImageTextDialog
+            isOpen={isImageTextDialogOpen}
+            setIsOpen={setImageTextDialogOpen}
+            eventId={id}
+            onImageTextAdded={handleContentAdded}
             addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
         />
 
@@ -366,6 +403,7 @@ export default function EventDetailPage() {
               onAddImage={() => setImageDialogOpen(true)}
               onAddText={() => setTextDialogOpen(true)}
               onAddGallery={() => setGalleryDialogOpen(true)}
+              onAddImageText={() => setImageTextDialogOpen(true)}
             />
             
             <div className="space-y-8 mt-8">

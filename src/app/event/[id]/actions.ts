@@ -52,6 +52,8 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
           return { ...baseContent, type: 'image', value: data.value, imagePath: data.imagePath, width: data.width, height: data.height } as EventContent;
         case 'gallery':
           return { ...baseContent, type: 'gallery', images: data.images } as EventContent;
+        case 'imageText':
+          return { ...baseContent, type: 'imageText', ...data } as EventContent;
         default:
           return null;
       }
@@ -158,6 +160,54 @@ export async function addGalleryContentAction(
     }
 }
 
+export async function addImageTextContentAction({
+    eventId,
+    imageBase64,
+    width,
+    height,
+    text,
+    imagePosition
+  }: {
+    eventId: string;
+    imageBase64: string;
+    width: number;
+    height: number;
+    text: string;
+    imagePosition: 'left' | 'right';
+  }): Promise<{ success?: boolean; error?: string }> {
+  if (!eventId || !imageBase64 || !width || !height || !text || !imagePosition) {
+    return { error: 'Faltan datos para añadir el contenido.' };
+  }
+  try {
+    const imagePath = `events/${eventId}/content/${Date.now()}_imgtext.jpg`;
+    const storageRef = ref(storage, imagePath);
+    const base64Data = imageBase64.split(',')[1];
+    
+    const snapshot = await uploadString(storageRef, base64Data, 'base64', {
+      contentType: 'image/jpeg',
+    });
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    await addDoc(collection(db, 'events', eventId, 'content'), {
+      type: 'imageText',
+      imageUrl: downloadURL,
+      imagePath,
+      width,
+      height,
+      text,
+      imagePosition,
+      createdAt: serverTimestamp(),
+    });
+    
+    revalidatePath(`/event/${eventId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error adding image-text content:", error);
+    return { error: `No se pudo guardar el contenido: ${error.message}` };
+  }
+}
+
+
 export async function deleteContentAction(
   { eventId, contentId, contentType, imagePaths }: { eventId: string, contentId: string, contentType: EventContent['type'], imagePaths: string[] }
 ): Promise<{ success?: boolean; error?: string }> {
@@ -167,7 +217,7 @@ export async function deleteContentAction(
 
   try {
     // 1. Delete image(s) from Storage if applicable
-    if ((contentType === 'image' || contentType === 'gallery') && imagePaths.length > 0) {
+    if ((contentType === 'image' || contentType === 'gallery' || contentType === 'imageText') && imagePaths.length > 0) {
       for (const path of imagePaths) {
         if (path) {
            try {
@@ -210,31 +260,29 @@ export async function deleteEventAction(
       
       for (const contentDoc of contentSnapshot.docs) {
         const contentData = contentDoc.data() as EventContent;
-        
+        let imagePathsToDelete: string[] = [];
+
         if (contentData.type === 'image' && contentData.imagePath) {
-          try {
-            const contentImageRef = ref(storage, contentData.imagePath);
-            await deleteObject(contentImageRef);
-          } catch (storageError: any) {
-            if (storageError.code !== 'storage/object-not-found') {
-              console.warn(`Could not delete content image ${contentData.imagePath}: ${storageError.message}`);
-            }
-          }
+          imagePathsToDelete.push(contentData.imagePath);
+        } else if (contentData.type === 'gallery') {
+            imagePathsToDelete = contentData.images.map(img => img.imagePath);
+        } else if (contentData.type === 'imageText' && contentData.imagePath) {
+            imagePathsToDelete.push(contentData.imagePath);
         }
-        if (contentData.type === 'gallery') {
-            for (const image of contentData.images) {
-                if (image.imagePath) {
-                    try {
-                        const galleryImageRef = ref(storage, image.imagePath);
-                        await deleteObject(galleryImageRef);
-                    } catch (storageError: any) {
-                        if (storageError.code !== 'storage/object-not-found') {
-                            console.warn(`Could not delete gallery image ${image.imagePath}: ${storageError.message}`);
-                        }
+        
+        for (const path of imagePathsToDelete) {
+             if (path) {
+                try {
+                    const imageRef = ref(storage, path);
+                    await deleteObject(imageRef);
+                } catch (storageError: any) {
+                    if (storageError.code !== 'storage/object-not-found') {
+                        console.warn(`No se pudo eliminar la imagen de contenido ${path}: ${storageError.message}`);
                     }
                 }
             }
         }
+        
         await deleteDoc(doc(db, 'events', id, 'content', contentDoc.id));
       }
   
