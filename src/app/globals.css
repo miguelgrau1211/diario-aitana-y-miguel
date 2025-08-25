@@ -107,6 +107,5 @@ body {
   bottom: -150px;
   animation: float 25s linear infinite;
   z-index: -1;
-  pointer-events: none;
   color: hsl(var(--primary) / 0.2);
 }
