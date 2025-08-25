@@ -89,11 +89,14 @@ body {
 
 @keyframes float {
   0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 0.8;
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: var(--start-opacity, 0.8);
+  }
+  50% {
+    transform: translateX(var(--translate-x-mid, 0));
   }
   100% {
-    transform: translateY(-100vh) rotate(360deg);
+    transform: translateY(-100vh) translateX(var(--translate-x-end, 0)) rotate(360deg);
     opacity: 0;
   }
 }
