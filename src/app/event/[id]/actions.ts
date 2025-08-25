@@ -39,9 +39,11 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
     const content = querySnapshot.docs.map(doc => {
       const data = doc.data();
       const createdAtTimestamp = data.createdAt as Timestamp;
+      const createdAt = createdAtTimestamp ? createdAtTimestamp.toDate() : new Date(); // Convert Timestamp to Date
+
       const baseContent = {
         id: doc.id,
-        createdAt: createdAtTimestamp ? createdAtTimestamp.toDate() : new Date(),
+        createdAt,
       };
 
       // Mapeo basado en el tipo
@@ -57,7 +59,8 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
         default:
           return null;
       }
-    }).filter(item => item !== null) as EventContent[];
+    }).filter(item => item !== null).map(item => ({ ...item!, createdAt: (item!.createdAt as Date).toISOString() })) // Serialize Date to string
+      .map(item => ({...item, createdAt: new Date(item.createdAt)})); // Then back to Date on server to match type.
 
     return { content };
   } catch (error: any) {
