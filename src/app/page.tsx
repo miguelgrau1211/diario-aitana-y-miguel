@@ -11,16 +11,21 @@ import { EventCard } from '@/components/EventCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PasswordProtect } from '@/components/PasswordProtect';
+import { getStorageUsageAction } from './add-event/actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
 
 export default function Home() {
   const [events, setEvents] = useState<DiaryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [storageUsage, setStorageUsage] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -32,6 +37,17 @@ export default function Home() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    const fetchStorageUsage = async () => {
+      const { usage, error } = await getStorageUsageAction();
+      if (error) {
+        console.warn(error);
+      } else if (usage !== undefined) {
+        setStorageUsage(usage);
+      }
+    };
+
+    fetchStorageUsage();
 
     const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -83,10 +99,24 @@ export default function Home() {
     return <PasswordProtect onAuthenticated={handleAuthenticated} />;
   }
 
+  const showStorageWarning = storageUsage !== null && storageUsage > STORAGE_LIMIT_BYTES;
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8">
+        
+        {showStorageWarning && (
+           <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Aviso de Almacenamiento</AlertTitle>
+            <AlertDescription>
+              Habéis superado el 80% del límite de almacenamiento gratuito (5 GB). Considerad la posibilidad de optimizar imágenes o hacer limpieza para evitar costes.
+              Uso actual: <strong>{(storageUsage / (1024*1024*1024)).toFixed(2)} GB</strong>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="mb-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

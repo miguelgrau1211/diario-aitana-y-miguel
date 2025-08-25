@@ -40,10 +40,12 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
     const content: EventContent[] = querySnapshot.docs.map(doc => {
       const data = doc.data();
       const createdAtTimestamp = data.createdAt as Timestamp;
+      // Convert timestamp to Date object
       const createdAt = createdAtTimestamp ? createdAtTimestamp.toDate() : new Date();
 
       const baseContent = {
         id: doc.id,
+        // Make sure createdAt is a Date object
         createdAt,
       };
 
@@ -55,7 +57,6 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
         case 'gallery':
           return { ...baseContent, type: 'gallery', images: data.images };
         case 'imageText':
-          // Re-assemble the object to ensure only defined fields are included
           return { 
             ...baseContent, 
             type: 'imageText', 
@@ -67,10 +68,9 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
             imagePosition: data.imagePosition,
           };
         default:
-          // Return a placeholder that can be filtered out
           return { ...baseContent, type: 'unknown' as any, value: '' };
       }
-    }).filter(item => item.type !== 'unknown'); // Filter out any unexpected content types
+    }).filter(item => item.type !== 'unknown');
 
     return { content };
 

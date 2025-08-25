@@ -4,7 +4,7 @@
 import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, deleteDoc, doc, getDocs, query } from 'firebase/firestore';
-import { deleteObject, ref } from 'firebase/storage';
+import { deleteObject, ref, getMetadata, listAll } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 
 export async function generateTitleAction(description: string) {
@@ -57,4 +57,37 @@ export async function createEventAction(
   revalidatePath('/');
   revalidatePath('/event');
   return { success: true };
+}
+
+
+export async function getStorageUsageAction(): Promise<{ usage?: number; error?: string }> {
+  try {
+    const listRef = ref(storage, 'events');
+    const res = await listAll(listRef);
+    let totalSize = 0;
+
+    // Get size for top-level event images
+    const topLevelFiles = res.items;
+    const topLevelPromises = topLevelFiles.map(fileRef => getMetadata(fileRef).then(meta => meta.size));
+    const topLevelSizes = await Promise.all(topLevelPromises);
+    totalSize += topLevelSizes.reduce((acc, size) => acc + size, 0);
+
+    // Get size for content images inside each event's folder
+    const folderPromises = res.prefixes.map(async (folderRef) => {
+        const subFolderRes = await listAll(folderRef);
+        const subFolderFiles = subFolderRes.items;
+        const subFolderPromises = subFolderFiles.map(fileRef => getMetadata(fileRef).then(meta => meta.size));
+        const subFolderSizes = await Promise.all(subFolderPromises);
+        return subFolderSizes.reduce((acc, size) => acc + size, 0);
+    });
+
+    const folderSizes = await Promise.all(folderPromises);
+    totalSize += folderSizes.reduce((acc, size) => acc + size, 0);
+    
+    return { usage: totalSize };
+
+  } catch (error: any) {
+    console.error('Error calculating storage usage:', error);
+    return { error: 'No se pudo calcular el uso del almacenamiento.' };
+  }
 }
