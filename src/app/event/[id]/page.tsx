@@ -291,13 +291,13 @@ export default function EventDetailPage() {
           title: 'Error al eliminar contenido',
           description: result.error,
         });
-        // Revert optimistic update on failure
+        // Revert optimistic update on failure by re-syncing
         await syncContent();
       } else {
         toast({
           title: 'Contenido eliminado',
         });
-        // Sync server state with optimistic state
+         // On success, we can simply update the state locally
         setContent(current => current.filter(item => item.id !== itemToDelete.id));
       }
     });
