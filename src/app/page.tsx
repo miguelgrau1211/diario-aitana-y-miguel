@@ -85,44 +85,46 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen relative overflow-hidden">
+    <div className="flex flex-col min-h-screen">
       <ArtisticBackground />
-      <Header />
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 z-10">
-        <div className="mb-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar por título o fecha..."
-              className="pl-10 w-full md:w-1/2 bg-background/80"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      <div className="relative z-10 flex flex-col flex-1">
+        <Header />
+        <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8">
+          <div className="mb-8">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar por título o fecha..."
+                className="pl-10 w-full md:w-1/2 bg-background/80"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        {loading ? (
-          <LoadingSpinner />
-        ) : filteredEvents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <h2 className="text-2xl font-semibold mb-2">No hay recuerdos aún</h2>
-            <p className="text-muted-foreground mb-4">¡Empieza a documentartu historia de amor!</p>
-            <Button asChild>
-              <Link href="/add-event">
-                <Plus className="mr-2 h-4 w-4" />
-                Crear primer recuerdo
-              </Link>
-            </Button>
-          </div>
-        )}
-      </main>
+          {loading ? (
+            <LoadingSpinner />
+          ) : filteredEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredEvents.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <h2 className="text-2xl font-semibold mb-2">No hay recuerdos aún</h2>
+              <p className="text-muted-foreground mb-4">¡Empieza a documentartu historia de amor!</p>
+              <Button asChild>
+                <Link href="/add-event">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Crear primer recuerdo
+                </Link>
+              </Button>
+            </div>
+          )}
+        </main>
+      </div>
       <div className="md:hidden fixed bottom-6 right-6 z-20">
         <Button asChild size="icon" className="rounded-full w-14 h-14 shadow-lg">
           <Link href="/add-event">
