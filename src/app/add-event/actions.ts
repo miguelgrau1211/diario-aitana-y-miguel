@@ -3,8 +3,8 @@
 
 import { suggestTitle } from '@/ai/flows/suggest-title';
 import { db, storage } from '@/lib/firebase';
-import { addDoc, collection, deleteDoc, doc, getDocs, query } from 'firebase/firestore';
-import { deleteObject, ref, getMetadata, listAll } from 'firebase/storage';
+import { addDoc, collection, getDocs, query } from 'firebase/firestore';
+import { ref, getMetadata, listAll } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 
 export async function generateTitleAction(description: string) {
@@ -21,7 +21,7 @@ export async function generateTitleAction(description: string) {
 }
 
 export async function createEventAction(
-    { title, description, image, date, width, height }: { title: string; description: string; image: string; date: Date; width: number; height: number; }
+    { title, description, image, date, width, height }: { title: string; description: string; image: Blob; date: Date; width: number; height: number; }
   ): Promise<{ success?: boolean; error?: string }> {
 
   if (!title || !description || !image || !date || !width || !height) {
@@ -29,13 +29,11 @@ export async function createEventAction(
   }
 
   try {
-    const { getDownloadURL, uploadString } = await import('firebase/storage');
+    const { getDownloadURL, uploadBytes } = await import('firebase/storage');
     const imagePath = `events/${Date.now()}_${title.replace(/\s+/g, '-')}.jpg`;
     const storageRef = ref(storage, imagePath);
     
-    const base64Data = image.split(',')[1];
-    
-    const snapshot = await uploadString(storageRef, base64Data, 'base64', {
+    const snapshot = await uploadBytes(storageRef, image, {
       contentType: 'image/jpeg',
     });
     const downloadURL = await getDownloadURL(snapshot.ref);

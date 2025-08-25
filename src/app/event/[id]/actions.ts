@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, Timestamp, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { DiaryEvent, EventContent, GalleryImage } from '@/types';
@@ -101,17 +101,16 @@ export async function addTextContentAction(
 }
 
 export async function addImageContentAction(
-  { eventId, imageBase64, width, height }: { eventId: string; imageBase64: string; width: number; height: number; }
+  { eventId, imageBlob, width, height }: { eventId: string; imageBlob: Blob; width: number; height: number; }
 ): Promise<{ success?: boolean; error?: string }> {
-  if (!eventId || !imageBase64 || !width || !height) {
+  if (!eventId || !imageBlob || !width || !height) {
     return { error: 'Faltan datos para añadir la imagen.' };
   }
   try {
     const imagePath = `events/${eventId}/content/${Date.now()}.jpg`;
     const storageRef = ref(storage, imagePath);
-    const base64Data = imageBase64.split(',')[1];
     
-    const snapshot = await uploadString(storageRef, base64Data, 'base64', {
+    const snapshot = await uploadBytes(storageRef, imageBlob, {
       contentType: 'image/jpeg',
     });
     const downloadURL = await getDownloadURL(snapshot.ref);
@@ -133,7 +132,7 @@ export async function addImageContentAction(
 }
 
 export async function addGalleryContentAction(
-    { eventId, images }: { eventId: string; images: { base64: string; width: number; height: number }[] }
+    { eventId, images }: { eventId: string; images: { blob: Blob; width: number; height: number }[] }
   ): Promise<{ success?: boolean; error?: string }> {
     if (!eventId || !images || images.length === 0) {
       return { error: 'Faltan datos para añadir la galería.' };
@@ -145,9 +144,8 @@ export async function addGalleryContentAction(
       for (const image of images) {
         const imagePath = `events/${eventId}/content/gallery_${Date.now()}_${Math.random()}.jpg`;
         const storageRef = ref(storage, imagePath);
-        const base64Data = image.base64.split(',')[1];
         
-        const snapshot = await uploadString(storageRef, base64Data, 'base64', {
+        const snapshot = await uploadBytes(storageRef, image.blob, {
           contentType: 'image/jpeg',
         });
         const downloadURL = await getDownloadURL(snapshot.ref);
@@ -176,28 +174,27 @@ export async function addGalleryContentAction(
 
 export async function addImageTextContentAction({
     eventId,
-    imageBase64,
+    imageBlob,
     width,
     height,
     text,
     imagePosition
   }: {
     eventId: string;
-    imageBase64: string;
+    imageBlob: Blob;
     width: number;
     height: number;
     text: string;
     imagePosition: 'left' | 'right';
   }): Promise<{ success?: boolean; error?: string }> {
-  if (!eventId || !imageBase64 || !width || !height || !text || !imagePosition) {
+  if (!eventId || !imageBlob || !width || !height || !text || !imagePosition) {
     return { error: 'Faltan datos para añadir el contenido.' };
   }
   try {
     const imagePath = `events/${eventId}/content/${Date.now()}_imgtext.jpg`;
     const storageRef = ref(storage, imagePath);
-    const base64Data = imageBase64.split(',')[1];
     
-    const snapshot = await uploadString(storageRef, base64Data, 'base64', {
+    const snapshot = await uploadBytes(storageRef, imageBlob, {
       contentType: 'image/jpeg',
     });
     const downloadURL = await getDownloadURL(snapshot.ref);

@@ -1,30 +1,28 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, X } from 'lucide-react';
 import Image from 'next/image';
-import { CropDialog } from './CropDialog';
+import { CropDialog, type CroppedImageResult } from './CropDialog';
 
-interface CroppedImageResult {
-    base64: string;
-    width: number;
-    height: number;
+interface GalleryImageState extends CroppedImageResult {
+    objectUrl: string;
 }
 
 interface AddGalleryDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onSave: (images: CroppedImageResult[]) => void;
+  onSave: (images: { blob: Blob; width: number; height: number }[]) => void;
   isSaving: boolean;
 }
 
 export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGalleryDialogProps) {
-  const [croppedImages, setCroppedImages] = useState<CroppedImageResult[]>([]);
+  const [croppedImages, setCroppedImages] = useState<GalleryImageState[]>([]);
   const { toast } = useToast();
   
   const [imagesToCrop, setImagesToCrop] = useState<string[]>([]);
@@ -49,6 +47,8 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         Promise.all(filePromises).then(base64Images => {
             setImagesToCrop(prev => [...prev, ...base64Images]);
         });
+
+        e.target.value = '';
     }
   };
   
@@ -58,7 +58,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
 
   const handleCropConfirm = (result: CroppedImageResult | null) => {
     if (result) {
-        setCroppedImages(prev => [...prev, result]);
+        setCroppedImages(prev => [...prev, { ...result, objectUrl: result.objectUrl }]);
     }
     // Remove the processed image and move to the next, if any
     setImagesToCrop(prev => prev.slice(1));
@@ -69,7 +69,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         toast({ variant: 'destructive', title: 'Imágenes insuficientes', description: 'Una galería debe tener al menos 2 imágenes.' });
         return;
     }
-    onSave(croppedImages);
+    onSave(croppedImages.map(img => ({ blob: img.blob, width: img.width, height: img.height })));
     setIsOpen(false);
   };
   
@@ -84,6 +84,12 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
   };
   
   const currentImageToCrop = useMemo(() => imagesToCrop[0] || null, [imagesToCrop]);
+
+  useEffect(() => {
+    return () => {
+        croppedImages.forEach(image => URL.revokeObjectURL(image.objectUrl));
+    }
+  }, [croppedImages]);
 
   return (
     <>
@@ -104,7 +110,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
             {croppedImages.map((img, index) => (
                 <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
-                    <Image src={img.base64} alt={`Previsualización ${index+1}`} width={img.width} height={img.height} className="object-cover w-full h-full" />
+                    <Image src={img.objectUrl} alt={`Previsualización ${index+1}`} width={img.width} height={img.height} className="object-cover w-full h-full" />
                     <Button
                         variant="destructive"
                         size="icon"

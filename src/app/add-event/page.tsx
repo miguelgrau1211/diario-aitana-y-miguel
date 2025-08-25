@@ -1,12 +1,11 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import type { Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
@@ -23,25 +22,20 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CropDialog } from '@/components/CropDialog';
-
-interface CroppedImageResult {
-    base64: string;
-    width: number;
-    height: number;
-}
+import { CropDialog, type CroppedImageResult } from '@/components/CropDialog';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: 'El título debe tener al menos 2 caracteres.' }).max(100),
   description: z.string().min(10, { message: 'La descripción debe tener al menos 10 caracteres.' }).max(5000),
-  image: z.any().refine((file) => file, 'Se requiere una imagen.'),
+  image: z.instanceof(Blob, { message: 'Se requiere una imagen.' }),
   date: z.date({
     required_error: 'Se requiere una fecha para el recuerdo.',
   }),
   imageDimensions: z.object({
       width: z.number(),
       height: z.number(),
-  }).optional(),
+  }),
+  previewUrl: z.string().optional(),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -52,15 +46,12 @@ export default function AddEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [isCropModalOpen, setCropModalOpen] = useState(false);
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
       title: '',
       description: '',
-      image: undefined,
-      date: new Date(),
     },
   });
 
@@ -69,19 +60,19 @@ export default function AddEventPage() {
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         setImageSrc(reader.result?.toString() || '');
-        setCropModalOpen(true);
       });
       reader.readAsDataURL(e.target.files[0]);
+       e.target.value = ''; // Reset input to allow same file selection again
     }
   };
 
   const handleCropConfirm = async (result: CroppedImageResult | null) => {
     if (result) {
-        form.setValue('image', result.base64);
+        form.setValue('image', result.blob);
         form.setValue('imageDimensions', { width: result.width, height: result.height });
+        form.setValue('previewUrl', result.objectUrl);
     }
     setImageSrc(null);
-    setCropModalOpen(false);
   };
 
   const onSubmit = async (data: EventFormValues) => {
@@ -93,8 +84,8 @@ export default function AddEventPage() {
         description: data.description,
         image: data.image,
         date: data.date,
-        width: data.imageDimensions!.width,
-        height: data.imageDimensions!.height,
+        width: data.imageDimensions.width,
+        height: data.imageDimensions.height,
       });
       
       if (result?.error) {
@@ -120,7 +111,15 @@ export default function AddEventPage() {
     }
   };
   
-  const previewImage = form.watch('image');
+  const previewUrl = form.watch('previewUrl');
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   return (
     <>
@@ -223,8 +222,8 @@ export default function AddEventPage() {
                       <FormControl>
                          <div className="flex items-center justify-center w-full">
                             <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
-                                {previewImage ? (
-                                    <Image src={previewImage} alt="Vista previa" layout="fill" className="object-contain" />
+                                {previewUrl ? (
+                                    <Image src={previewUrl} alt="Vista previa" layout="fill" className="object-contain" />
                                 ) : (
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                         <Upload className="w-8 h-8 mb-4 text-muted-foreground" />

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { Button } from '@/components/ui/button';
@@ -10,17 +10,13 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload } from 'lucide-react';
 import Image from 'next/image';
-import { CropDialog } from './CropDialog';
+import { CropDialog, type CroppedImageResult } from './CropDialog';
 
-export interface CroppedImageResult {
-    base64: string;
-    width: number;
-    height: number;
-}
+
 interface AddImageDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onSave: (imageData: CroppedImageResult) => void;
+  onSave: (imageData: { blob: Blob; width: number; height: number; objectUrl: string }) => void;
   isSaving: boolean;
 }
 
@@ -38,6 +34,7 @@ export function AddImageDialog({ isOpen, setIsOpen, onSave, isSaving }: AddImage
         setImageSrc(reader.result as string);
       };
       reader.readAsDataURL(file);
+       e.target.value = '';
     } else {
       setImageSrc(null);
     }
@@ -64,10 +61,21 @@ export function AddImageDialog({ isOpen, setIsOpen, onSave, isSaving }: AddImage
         setIsOpen(open);
         if (!open) {
             setImageSrc(null);
+            if (croppedImageResult?.objectUrl) {
+                URL.revokeObjectURL(croppedImageResult.objectUrl);
+            }
             setCroppedImageResult(null);
         }
     }
   };
+  
+  useEffect(() => {
+    return () => {
+        if (croppedImageResult?.objectUrl) {
+            URL.revokeObjectURL(croppedImageResult.objectUrl);
+        }
+    }
+  }, [croppedImageResult]);
 
   return (
     <>
@@ -86,8 +94,8 @@ export function AddImageDialog({ isOpen, setIsOpen, onSave, isSaving }: AddImage
         
         <div className="flex items-center justify-center w-full my-4">
             <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
-                {croppedImageResult?.base64 ? (
-                    <Image src={croppedImageResult.base64} alt="Vista previa recortada" width={croppedImageResult.width} height={croppedImageResult.height} className="object-contain h-full w-auto" />
+                {croppedImageResult?.objectUrl ? (
+                    <Image src={croppedImageResult.objectUrl} alt="Vista previa recortada" width={croppedImageResult.width} height={croppedImageResult.height} className="object-contain h-full w-auto" />
                 ) : (
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                         <Upload className="w-8 h-8 mb-4 text-muted-foreground" />

@@ -16,8 +16,11 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
-interface CroppedImageResult {
-    base64: string;
+const MAX_IMAGE_DIMENSION = 1920; // Max width/height of 1920px
+
+export interface CroppedImageResult {
+    blob: Blob;
+    objectUrl: string;
     width: number;
     height: number;
 }
@@ -32,12 +35,25 @@ function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<CroppedImag
     const canvas = document.createElement('canvas');
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
+
+    let targetWidth = Math.floor(crop.width * scaleX);
+    let targetHeight = Math.floor(crop.height * scaleY);
     
-    const cropWidth = Math.floor(crop.width * scaleX);
-    const cropHeight = Math.floor(crop.height * scaleY);
+    // Resize logic
+    if (targetWidth > MAX_IMAGE_DIMENSION || targetHeight > MAX_IMAGE_DIMENSION) {
+        if (targetWidth > targetHeight) {
+            const ratio = MAX_IMAGE_DIMENSION / targetWidth;
+            targetWidth = MAX_IMAGE_DIMENSION;
+            targetHeight = Math.floor(targetHeight * ratio);
+        } else {
+            const ratio = MAX_IMAGE_DIMENSION / targetHeight;
+            targetHeight = MAX_IMAGE_DIMENSION;
+            targetWidth = Math.floor(targetWidth * ratio);
+        }
+    }
     
-    canvas.width = cropWidth;
-    canvas.height = cropHeight;
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     const ctx = canvas.getContext('2d');
   
@@ -49,12 +65,12 @@ function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<CroppedImag
       image,
       crop.x * scaleX,
       crop.y * scaleY,
-      cropWidth,
-      cropHeight,
+      crop.width * scaleX,
+      crop.height * scaleY,
       0,
       0,
-      cropWidth,
-      cropHeight
+      targetWidth,
+      targetHeight
     );
   
     return new Promise((resolve, reject) => {
@@ -64,17 +80,16 @@ function getCroppedImg(image: HTMLImageElement, crop: Crop): Promise<CroppedImag
             reject(new Error('Canvas is empty'));
             return;
           }
-          const reader = new FileReader();
-          reader.addEventListener('load', () => resolve({
-              base64: reader.result as string,
-              width: cropWidth,
-              height: cropHeight,
-          }));
-          reader.addEventListener('error', (error) => reject(error));
-          reader.readAsDataURL(blob);
+          const objectUrl = URL.createObjectURL(blob);
+          resolve({
+              blob,
+              objectUrl,
+              width: targetWidth,
+              height: targetHeight,
+          });
         },
         'image/jpeg',
-        0.95
+        0.9 // Use 90% quality
       );
     });
 }
@@ -117,18 +132,13 @@ export function CropDialog({ imageSrc, onConfirm, showSkipButton = false }: Crop
 
     const handleSkip = () => {
         if (imageRef.current) {
-            const img = imageRef.current;
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0);
-            const base64 = canvas.toDataURL('image/jpeg', 0.95);
-            onConfirm({
-                base64,
-                width: img.naturalWidth,
-                height: img.naturalHeight
-            });
+            // "Skip" still respects the max dimensions, but doesn't crop
+            const fullCrop: Crop = { unit: 'px', x: 0, y: 0, width: imageRef.current.naturalWidth, height: imageRef.current.naturalHeight };
+            getCroppedImg(imageRef.current, fullCrop)
+                .then(onConfirm)
+                .catch(err => {
+                     toast({ variant: 'destructive', title: 'Error al procesar', description: 'No se pudo procesar la imagen. Inténtalo de nuevo.' });
+                });
         }
     }
 
