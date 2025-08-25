@@ -19,6 +19,7 @@ import { getStorageUsageAction } from './add-event/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
+const STORAGE_WARNING_THRESHOLD = 0.8; // 80%
 
 export default function Home() {
   const [events, setEvents] = useState<DiaryEvent[]>([]);
@@ -99,7 +100,7 @@ export default function Home() {
     return <PasswordProtect onAuthenticated={handleAuthenticated} />;
   }
 
-  const showStorageWarning = storageUsage !== null && storageUsage > STORAGE_LIMIT_BYTES;
+  const showStorageWarning = storageUsage !== null && storageUsage > (STORAGE_LIMIT_BYTES * STORAGE_WARNING_THRESHOLD);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -112,7 +113,7 @@ export default function Home() {
             <AlertTitle>Aviso de Almacenamiento</AlertTitle>
             <AlertDescription>
               Habéis superado el 80% del límite de almacenamiento gratuito (5 GB). Considerad la posibilidad de optimizar imágenes o hacer limpieza para evitar costes.
-              Uso actual: <strong>{(storageUsage / (1024*1024*1024)).toFixed(2)} GB</strong>
+              Uso actual: <strong>{(storageUsage! / (1024*1024*1024)).toFixed(2)} GB</strong> de 5 GB.
             </AlertDescription>
           </Alert>
         )}
