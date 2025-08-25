@@ -3,8 +3,17 @@
 
 import { useEffect, useState, useOptimistic, startTransition, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent } from '@/types';
-import { getEventAction, getEventContentAction, deleteEventAction, deleteContentAction } from './actions';
+import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent, GalleryImage } from '@/types';
+import { 
+    getEventAction, 
+    getEventContentAction, 
+    deleteEventAction, 
+    deleteContentAction,
+    addTextContentAction,
+    addImageContentAction,
+    addGalleryContentAction,
+    addImageTextContentAction,
+} from './actions';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Trash2, Loader2, Pencil } from 'lucide-react';
@@ -12,7 +21,7 @@ import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
 import { AddTextDialog } from '@/components/AddTextDialog';
-import { AddImageDialog } from '@/components/AddImageDialog';
+import { AddImageDialog, type CroppedImageResult } from '@/components/AddImageDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +50,10 @@ function optimisticContentReducer(
 ): EventContent[] {
   switch (update.type) {
     case 'add':
+      // Ensure we don't add duplicates if server responds quickly
+      if (state.find(item => item.id === update.item.id)) {
+        return state;
+      }
       return [...state, update.item];
     case 'remove':
       return state.filter(item => item.id !== update.item.id);
@@ -116,8 +129,7 @@ export default function EventDetailPage() {
     }
   }, [id, router, toast]);
 
-
-  const handleContentAdded = async () => {
+  const syncContent = async () => {
      if (id) {
         const contentResult = await getEventContentAction(id);
         if (contentResult.error) {
@@ -126,6 +138,107 @@ export default function EventDetailPage() {
             setContent(contentResult.content || []);
         }
     }
+  };
+
+  const handleTextSubmit = (text: string) => {
+    startContentActionTransition(async () => {
+      const optimisticItem: TextContent = {
+        id: `optimistic-${Date.now()}`,
+        type: 'text',
+        value: text,
+        createdAt: new Date(),
+      };
+      setOptimisticContent({ item: optimisticItem, type: 'add' });
+      
+      const result = await addTextContentAction({ eventId: id, text });
+      if (result.error) {
+        toast({ variant: 'destructive', title: 'Error al guardar', description: result.error });
+      } else {
+        toast({ title: '¡Texto añadido!', description: 'Tu nuevo texto forma parte de este recuerdo.' });
+      }
+      await syncContent();
+    });
+  };
+
+  const handleImageSubmit = (imageData: CroppedImageResult) => {
+    startContentActionTransition(async () => {
+        const optimisticItem: ImageContent = {
+            id: `optimistic-${Date.now()}`,
+            type: 'image',
+            value: imageData.base64,
+            createdAt: new Date(),
+            imagePath: '',
+            width: imageData.width,
+            height: imageData.height,
+        };
+        setOptimisticContent({ item: optimisticItem, type: 'add' });
+
+        const result = await addImageContentAction({ eventId: id, imageBase64: imageData.base64, width: imageData.width, height: imageData.height });
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Error al subir la imagen', description: result.error });
+        } else {
+            toast({ title: '¡Imagen añadida!', description: 'Una nueva foto ilumina este recuerdo.' });
+        }
+        await syncContent();
+    });
+  };
+
+  const handleGallerySubmit = (images: CroppedImageResult[]) => {
+    startContentActionTransition(async () => {
+      const optimisticItem: GalleryContent = {
+          id: `optimistic-${Date.now()}`,
+          type: 'gallery',
+          createdAt: new Date(),
+          images: images.map(img => ({
+              value: img.base64,
+              imagePath: '',
+              width: img.width,
+              height: img.height,
+          })),
+      };
+      setOptimisticContent({ item: optimisticItem, type: 'add' });
+
+      const result = await addGalleryContentAction({ eventId: id, images });
+       if (result.error) {
+            toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
+        } else {
+            toast({ title: '¡Galería añadida!', description: 'Vuestras fotos han sido añadidas al recuerdo.' });
+        }
+        await syncContent();
+    });
+  };
+
+  const handleImageTextSubmit = (data: { image: CroppedImageResult; text: string; position: 'left' | 'right' }) => {
+     startContentActionTransition(async () => {
+        const optimisticItem: ImageTextContent = {
+            id: `optimistic-${Date.now()}`,
+            type: 'imageText',
+            createdAt: new Date(),
+            imageUrl: data.image.base64,
+            imagePath: '',
+            width: data.image.width,
+            height: data.image.height,
+            text: data.text,
+            imagePosition: data.position,
+        };
+        setOptimisticContent({ item: optimisticItem, type: 'add' });
+
+        const result = await addImageTextContentAction({
+            eventId: id,
+            imageBase64: data.image.base64,
+            width: data.image.width,
+            height: data.image.height,
+            text: data.text,
+            imagePosition: data.position,
+        });
+
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Error al guardar', description: result.error });
+        } else {
+            toast({ title: '¡Contenido añadido!', description: 'La combinación de imagen y texto se ha guardado.' });
+        }
+        await syncContent();
+     });
   };
 
   const handleEventDelete = async () => {
@@ -157,11 +270,11 @@ export default function EventDetailPage() {
       setOptimisticContent({ item: itemToDelete, type: 'remove' });
 
       let imagePaths: string[] = [];
-      if (itemToDelete.type === 'image') {
+      if (itemToDelete.type === 'image' && itemToDelete.imagePath) {
           imagePaths = [itemToDelete.imagePath];
       } else if (itemToDelete.type === 'gallery') {
-          imagePaths = itemToDelete.images.map(img => img.imagePath);
-      } else if (itemToDelete.type === 'imageText') {
+          imagePaths = itemToDelete.images.map(img => img.imagePath).filter(Boolean);
+      } else if (itemToDelete.type === 'imageText' && itemToDelete.imagePath) {
           imagePaths = [itemToDelete.imagePath];
       }
       
@@ -179,7 +292,7 @@ export default function EventDetailPage() {
           description: result.error,
         });
         // Revert optimistic update on failure
-        await handleContentAdded();
+        await syncContent();
       } else {
         toast({
           title: 'Contenido eliminado',
@@ -240,13 +353,14 @@ export default function EventDetailPage() {
     switch(item.type) {
       case 'text':
         return (
-          <div className="p-6 bg-secondary rounded-lg shadow-sm">
+          <div className="p-6 bg-secondary rounded-lg shadow-sm relative group">
+             {contentControls}
             <p className="text-secondary-foreground whitespace-pre-wrap">{item.value}</p>
           </div>
         );
       case 'image':
         return (
-          <div className="w-full relative rounded-lg overflow-hidden shadow-lg">
+          <div className="w-full relative rounded-lg overflow-hidden shadow-lg group">
              {contentControls}
             {item.width && item.height ? (
                 <Image 
@@ -270,7 +384,7 @@ export default function EventDetailPage() {
         );
       case 'gallery':
         return (
-            <div className="relative">
+            <div className="relative group">
               {contentControls}
               <div className="flex gap-2 rounded-lg overflow-hidden shadow-lg">
                   {item.images.map((img, index) => (
@@ -289,13 +403,13 @@ export default function EventDetailPage() {
         );
       case 'imageText':
         return (
-            <div className="relative bg-secondary rounded-lg shadow-sm overflow-hidden">
+            <div className="relative bg-secondary rounded-lg shadow-sm overflow-hidden group">
                 {contentControls}
                 <div className={cn(
                     "grid grid-cols-1 md:grid-cols-2 gap-6 items-center",
                     item.imagePosition === 'right' && "md:grid-flow-col-dense"
                 )}>
-                    <div className={cn("relative w-full h-full", item.imagePosition === 'right' && 'md:col-start-2')}>
+                    <div className={cn("relative w-full h-full min-h-[200px]", item.imagePosition === 'right' && 'md:col-start-2')}>
                         <Image
                             src={item.imageUrl}
                             alt="Recuerdo con texto"
@@ -320,30 +434,26 @@ export default function EventDetailPage() {
        <AddTextDialog
         isOpen={isTextDialogOpen}
         setIsOpen={setTextDialogOpen}
-        eventId={id}
-        onTextAdded={handleContentAdded}
-        addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
+        onSave={handleTextSubmit}
+        isSaving={isContentActionPending}
        />
         <AddImageDialog
             isOpen={isImageDialogOpen}
             setIsOpen={setImageDialogOpen}
-            eventId={id}
-            onImageAdded={handleContentAdded}
-            addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
+            onSave={handleImageSubmit}
+            isSaving={isContentActionPending}
         />
         <AddGalleryDialog
             isOpen={isGalleryDialogOpen}
             setIsOpen={setGalleryDialogOpen}
-            eventId={id}
-            onGalleryAdded={handleContentAdded}
-            addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
+            onSave={handleGallerySubmit}
+            isSaving={isContentActionPending}
         />
         <AddImageTextDialog
             isOpen={isImageTextDialogOpen}
             setIsOpen={setImageTextDialogOpen}
-            eventId={id}
-            onImageTextAdded={handleContentAdded}
-            addOptimisticContent={(item) => setOptimisticContent({ item, type: 'add' })}
+            onSave={handleImageTextSubmit}
+            isSaving={isContentActionPending}
         />
 
        <Header />
@@ -415,7 +525,7 @@ export default function EventDetailPage() {
                  )}
 
                  {optimisticContent.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((item) => (
-                    <div key={item.id} className="relative group">
+                    <div key={item.id} className="relative">
                         {renderContentItem(item)}
                     </div>
                  ))}

@@ -8,28 +8,24 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { addImageContentAction } from '@/app/event/[id]/actions';
 import { Loader2, Upload } from 'lucide-react';
 import Image from 'next/image';
-import type { EventContent } from '@/types';
 import { CropDialog } from './CropDialog';
 
-interface AddImageDialogProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  eventId: string;
-  onImageAdded: () => void;
-  addOptimisticContent: (item: EventContent) => void;
-}
-
-interface CroppedImageResult {
+export interface CroppedImageResult {
     base64: string;
     width: number;
     height: number;
 }
+interface AddImageDialogProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onSave: (imageData: CroppedImageResult) => void;
+  isSaving: boolean;
+}
 
-export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOptimisticContent }: AddImageDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+export function AddImageDialog({ isOpen, setIsOpen, onSave, isSaving }: AddImageDialogProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [croppedImageResult, setCroppedImageResult] = useState<CroppedImageResult | null>(null);
   const { toast } = useToast();
@@ -47,58 +43,24 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
     }
   };
   
-  const handleCropConfirm = async (result: CroppedImageResult | null) => {
+  const handleCropConfirm = (result: CroppedImageResult | null) => {
     if (result) {
         setCroppedImageResult(result);
     }
     setImageSrc(null);
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!croppedImageResult) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se ha subido o recortado ninguna imagen.' });
         return;
     }
-
-    setIsSubmitting(true);
-    
-    addOptimisticContent({
-        id: `optimistic-${Date.now()}`,
-        type: 'image',
-        value: croppedImageResult.base64,
-        createdAt: new Date(),
-        imagePath: '',
-        width: croppedImageResult.width,
-        height: croppedImageResult.height,
-    });
-    handleCloseDialog(false);
-
-    try {
-      const result = await addImageContentAction({ 
-          eventId, 
-          imageBase64: croppedImageResult.base64,
-          width: croppedImageResult.width,
-          height: croppedImageResult.height,
-      });
-      
-      if (result.error) throw new Error(result.error);
-      
-      toast({
-        title: '¡Imagen añadida!',
-        description: 'Una nueva foto ilumina este recuerdo.',
-      });
-
-      await onImageAdded();
-
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Error al subir la imagen', description: error.message });
-    } finally {
-        setIsSubmitting(false);
-    }
+    onSave(croppedImageResult);
+    setIsOpen(false);
   };
   
   const handleCloseDialog = (open: boolean) => {
-    if (!isSubmitting) {
+    if (!isSaving) {
         setIsOpen(open);
         if (!open) {
             setImageSrc(null);
@@ -138,9 +100,9 @@ export function AddImageDialog({ isOpen, setIsOpen, eventId, onImageAdded, addOp
         </div>
 
         <DialogFooter>
-            <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !croppedImageResult}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={isSaving || !croppedImageResult}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar Foto
             </Button>
         </DialogFooter>

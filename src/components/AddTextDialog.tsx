@@ -6,24 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { addTextContentAction } from '@/app/event/[id]/actions';
 import { Loader2 } from 'lucide-react';
-import type { EventContent } from '@/types';
 
 interface AddTextDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  eventId: string;
-  onTextAdded: () => void;
-  addOptimisticContent: (item: EventContent) => void;
+  onSave: (text: string) => void;
+  isSaving: boolean;
 }
 
-export function AddTextDialog({ isOpen, setIsOpen, eventId, onTextAdded, addOptimisticContent }: AddTextDialogProps) {
+export function AddTextDialog({ isOpen, setIsOpen, onSave, isSaving }: AddTextDialogProps) {
   const [text, setText] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (text.trim().length < 5) {
       toast({
         variant: 'destructive',
@@ -32,41 +28,12 @@ export function AddTextDialog({ isOpen, setIsOpen, eventId, onTextAdded, addOpti
       });
       return;
     }
-
-    setIsSubmitting(true);
-
-    addOptimisticContent({
-      id: `optimistic-${Date.now()}`,
-      type: 'text',
-      value: text,
-      createdAt: new Date(),
-    });
+    onSave(text);
     setIsOpen(false);
-
-    try {
-      const result = await addTextContentAction({ eventId, text });
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      toast({
-        title: '¡Texto añadido!',
-        description: 'Tu nuevo texto forma parte de este recuerdo.',
-      });
-      setText('');
-      await onTextAdded();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error al guardar',
-        description: error.message,
-      });
-    } finally {
-        setIsSubmitting(false);
-    }
   };
 
   const handleCloseDialog = (open: boolean) => {
-    if (!isSubmitting) {
+    if (!isSaving) {
         setIsOpen(open);
         if (!open) setText('');
     }
@@ -84,12 +51,12 @@ export function AddTextDialog({ isOpen, setIsOpen, eventId, onTextAdded, addOpti
           className="min-h-[150px] my-4"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          disabled={isSubmitting}
+          disabled={isSaving}
         />
         <DialogFooter>
-          <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSubmitting}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={isSaving || text.trim().length < 5}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Guardar Texto
           </Button>
         </DialogFooter>

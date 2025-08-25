@@ -11,19 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { addImageTextContentAction } from '@/app/event/[id]/actions';
 import { Loader2, Upload, AlignLeft, AlignRight } from 'lucide-react';
 import Image from 'next/image';
-import type { EventContent } from '@/types';
 import { CropDialog } from './CropDialog';
-
-interface AddImageTextDialogProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  eventId: string;
-  onImageTextAdded: () => void;
-  addOptimisticContent: (item: EventContent) => void;
-}
 
 interface CroppedImageResult {
     base64: string;
@@ -31,8 +21,15 @@ interface CroppedImageResult {
     height: number;
 }
 
-export function AddImageTextDialog({ isOpen, setIsOpen, eventId, onImageTextAdded, addOptimisticContent }: AddImageTextDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+interface AddImageTextDialogProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onSave: (data: { image: CroppedImageResult; text: string; position: 'left' | 'right' }) => void;
+  isSaving: boolean;
+}
+
+
+export function AddImageTextDialog({ isOpen, setIsOpen, onSave, isSaving }: AddImageTextDialogProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [croppedImageResult, setCroppedImageResult] = useState<CroppedImageResult | null>(null);
   const [text, setText] = useState('');
@@ -52,14 +49,14 @@ export function AddImageTextDialog({ isOpen, setIsOpen, eventId, onImageTextAdde
     }
   };
   
-  const handleCropConfirm = async (result: CroppedImageResult | null) => {
+  const handleCropConfirm = (result: CroppedImageResult | null) => {
     if (result) {
         setCroppedImageResult(result);
     }
     setImageSrc(null);
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!croppedImageResult) {
         toast({ variant: 'destructive', title: 'Error', description: 'Por favor, sube y recorta una imagen.' });
         return;
@@ -69,49 +66,16 @@ export function AddImageTextDialog({ isOpen, setIsOpen, eventId, onImageTextAdde
         return;
     }
 
-    setIsSubmitting(true);
-    
-    addOptimisticContent({
-        id: `optimistic-${Date.now()}`,
-        type: 'imageText',
-        createdAt: new Date(),
-        imageUrl: croppedImageResult.base64,
-        imagePath: '',
-        width: croppedImageResult.width,
-        height: croppedImageResult.height,
+    onSave({
+        image: croppedImageResult,
         text,
-        imagePosition,
+        position: imagePosition,
     });
-    handleCloseDialog(false);
-
-    try {
-      const result = await addImageTextContentAction({ 
-          eventId, 
-          imageBase64: croppedImageResult.base64,
-          width: croppedImageResult.width,
-          height: croppedImageResult.height,
-          text,
-          imagePosition,
-      });
-      
-      if (result.error) throw new Error(result.error);
-      
-      toast({
-        title: '¡Contenido añadido!',
-        description: 'La combinación de imagen y texto se ha guardado.',
-      });
-
-      await onImageTextAdded();
-
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Error al guardar', description: error.message });
-    } finally {
-        setIsSubmitting(false);
-    }
+    setIsOpen(false);
   };
   
   const handleCloseDialog = (open: boolean) => {
-    if (!isSubmitting) {
+    if (!isSaving) {
         setIsOpen(open);
         if (!open) {
             setImageSrc(null);
@@ -140,7 +104,7 @@ export function AddImageTextDialog({ isOpen, setIsOpen, eventId, onImageTextAdde
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4">
             <div className="space-y-4">
                 <Label>Imagen</Label>
-                <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
+                <label htmlFor="dropzone-file-dialog-imagetext" className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
                     {croppedImageResult?.base64 ? (
                         <Image src={croppedImageResult.base64} alt="Vista previa recortada" layout="fill" className="object-contain" />
                     ) : (
@@ -149,12 +113,13 @@ export function AddImageTextDialog({ isOpen, setIsOpen, eventId, onImageTextAdde
                             <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Haz clic para subir</span></p>
                         </div>
                     )}
-                    <Input id="dropzone-file-dialog" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                    <Input id="dropzone-file-dialog-imagetext" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                 </label>
                  <div>
                     <Label>Posición de la Imagen</Label>
                     <RadioGroup
                         defaultValue="left"
+                        value={imagePosition}
                         onValueChange={(value: 'left' | 'right') => setImagePosition(value)}
                         className="flex items-center gap-4 mt-2"
                         >
@@ -177,15 +142,15 @@ export function AddImageTextDialog({ isOpen, setIsOpen, eventId, onImageTextAdde
                     className="min-h-[240px] resize-none"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    disabled={isSubmitting}
+                    disabled={isSaving}
                 />
             </div>
         </div>
 
         <DialogFooter>
-            <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !croppedImageResult || !text}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={isSaving || !croppedImageResult || !text}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar Contenido
             </Button>
         </DialogFooter>

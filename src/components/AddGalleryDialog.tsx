@@ -6,29 +6,25 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { addGalleryContentAction } from '@/app/event/[id]/actions';
 import { Loader2, Upload, X } from 'lucide-react';
 import Image from 'next/image';
-import type { EventContent, GalleryImage } from '@/types';
 import { CropDialog } from './CropDialog';
 
-interface AddGalleryDialogProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  eventId: string;
-  onGalleryAdded: () => void;
-  addOptimisticContent: (item: EventContent) => void;
-}
-
-interface ImagePreview {
+interface CroppedImageResult {
     base64: string;
     width: number;
     height: number;
 }
 
-export function AddGalleryDialog({ isOpen, setIsOpen, eventId, onGalleryAdded, addOptimisticContent }: AddGalleryDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [croppedImages, setCroppedImages] = useState<ImagePreview[]>([]);
+interface AddGalleryDialogProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onSave: (images: CroppedImageResult[]) => void;
+  isSaving: boolean;
+}
+
+export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGalleryDialogProps) {
+  const [croppedImages, setCroppedImages] = useState<CroppedImageResult[]>([]);
   const { toast } = useToast();
   
   const [imagesToCrop, setImagesToCrop] = useState<string[]>([]);
@@ -60,7 +56,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, eventId, onGalleryAdded, a
     setCroppedImages(prev => prev.filter((_, i) => i !== index));
   }
 
-  const handleCropConfirm = (result: ImagePreview | null) => {
+  const handleCropConfirm = (result: CroppedImageResult | null) => {
     if (result) {
         setCroppedImages(prev => [...prev, result]);
     }
@@ -68,47 +64,17 @@ export function AddGalleryDialog({ isOpen, setIsOpen, eventId, onGalleryAdded, a
     setImagesToCrop(prev => prev.slice(1));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (croppedImages.length < 2) {
         toast({ variant: 'destructive', title: 'Imágenes insuficientes', description: 'Una galería debe tener al menos 2 imágenes.' });
         return;
     }
-
-    setIsSubmitting(true);
-    
-    addOptimisticContent({
-        id: `optimistic-${Date.now()}`,
-        type: 'gallery',
-        createdAt: new Date(),
-        images: croppedImages.map(img => ({
-            value: img.base64,
-            imagePath: '',
-            width: img.width,
-            height: img.height,
-        })),
-    });
-    handleCloseDialog(false);
-
-    try {
-      const result = await addGalleryContentAction({ eventId, images: croppedImages });
-      if (result.error) throw new Error(result.error);
-      
-      toast({
-        title: '¡Galería añadida!',
-        description: 'Vuestras fotos han sido añadidas al recuerdo.',
-      });
-
-      await onGalleryAdded();
-
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Error al crear la galería', description: error.message });
-    } finally {
-        setIsSubmitting(false);
-    }
+    onSave(croppedImages);
+    setIsOpen(false);
   };
   
   const handleCloseDialog = (open: boolean) => {
-    if (!isSubmitting) {
+    if (!isSaving) {
         setIsOpen(open);
         if (!open) {
             setCroppedImages([]);
@@ -161,9 +127,9 @@ export function AddGalleryDialog({ isOpen, setIsOpen, eventId, onGalleryAdded, a
         </div>
 
         <DialogFooter>
-            <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || croppedImages.length < 2}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={isSaving || croppedImages.length < 2}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar Galería
             </Button>
         </DialogFooter>
