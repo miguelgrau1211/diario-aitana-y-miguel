@@ -36,38 +36,50 @@ export async function getEventContentAction(eventId: string): Promise<{ content?
   try {
     const contentQuery = query(collection(db, 'events', eventId, 'content'), orderBy('createdAt', 'asc'));
     const querySnapshot = await getDocs(contentQuery);
-    const content = querySnapshot.docs.map(doc => {
+    
+    const content: EventContent[] = querySnapshot.docs.map(doc => {
       const data = doc.data();
       const createdAtTimestamp = data.createdAt as Timestamp;
-      const createdAt = createdAtTimestamp ? createdAtTimestamp.toDate() : new Date(); // Convert Timestamp to Date
+      const createdAt = createdAtTimestamp ? createdAtTimestamp.toDate() : new Date();
 
       const baseContent = {
         id: doc.id,
         createdAt,
       };
 
-      // Mapeo basado en el tipo
       switch (data.type) {
         case 'text':
-          return { ...baseContent, type: 'text', value: data.value } as EventContent;
+          return { ...baseContent, type: 'text', value: data.value };
         case 'image':
-          return { ...baseContent, type: 'image', value: data.value, imagePath: data.imagePath, width: data.width, height: data.height } as EventContent;
+          return { ...baseContent, type: 'image', value: data.value, imagePath: data.imagePath, width: data.width, height: data.height };
         case 'gallery':
-          return { ...baseContent, type: 'gallery', images: data.images } as EventContent;
+          return { ...baseContent, type: 'gallery', images: data.images };
         case 'imageText':
-          return { ...baseContent, type: 'imageText', ...data } as EventContent;
+          // Re-assemble the object to ensure only defined fields are included
+          return { 
+            ...baseContent, 
+            type: 'imageText', 
+            imageUrl: data.imageUrl,
+            imagePath: data.imagePath,
+            width: data.width,
+            height: data.height,
+            text: data.text,
+            imagePosition: data.imagePosition,
+          };
         default:
-          return null;
+          // Return a placeholder that can be filtered out
+          return { ...baseContent, type: 'unknown' as any, value: '' };
       }
-    }).filter(item => item !== null).map(item => ({ ...item!, createdAt: (item!.createdAt as Date).toISOString() })) // Serialize Date to string
-      .map(item => ({...item, createdAt: new Date(item.createdAt)})); // Then back to Date on server to match type.
+    }).filter(item => item.type !== 'unknown'); // Filter out any unexpected content types
 
     return { content };
+
   } catch (error: any) {
     console.error('Error fetching event content:', error);
     return { error: `Error al obtener el contenido del recuerdo: ${error.message}` };
   }
 }
+
 
 export async function addTextContentAction(
   { eventId, text }: { eventId: string; text: string }
