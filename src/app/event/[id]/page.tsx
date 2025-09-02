@@ -87,6 +87,17 @@ export default function EventDetailPage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   useEffect(() => {
+    // Debugging function to catch unhandled errors on mobile
+    window.onerror = function(msg, url, line, col, error) {
+      alert("Error: " + msg + " en " + url + ":" + line);
+    };
+
+    return () => {
+      window.onerror = null; // Clean up on component unmount
+    };
+  }, []);
+
+  useEffect(() => {
     if (id) {
       const fetchEventData = async () => {
         setLoading(true);
