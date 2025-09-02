@@ -139,35 +139,34 @@ export async function addGalleryContentAction(
     }
   
     try {
-      const uploadedImages: GalleryImage[] = [];
-  
-      for (const image of images) {
-        const imagePath = `events/${eventId}/content/gallery_${Date.now()}_${Math.random()}.jpg`;
-        const storageRef = ref(storage, imagePath);
-        
-        const snapshot = await uploadBytes(storageRef, image.blob, {
-          contentType: 'image/jpeg',
+        const uploadPromises = images.map(async (image) => {
+            const imagePath = `events/${eventId}/content/gallery_${Date.now()}_${Math.random()}.jpg`;
+            const storageRef = ref(storage, imagePath);
+
+            const snapshot = await uploadBytes(storageRef, image.blob, {
+                contentType: 'image/jpeg',
+            });
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            return {
+                value: downloadURL,
+                imagePath: imagePath,
+                width: image.width,
+                height: image.height,
+            };
         });
-        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        const uploadedImages: GalleryImage[] = await Promise.all(uploadPromises);
   
-        uploadedImages.push({
-          value: downloadURL,
-          imagePath: imagePath,
-          width: image.width,
-          height: image.height,
+        await addDoc(collection(db, 'events', eventId, 'content'), {
+            type: 'gallery',
+            images: uploadedImages,
+            createdAt: serverTimestamp(),
         });
-      }
-  
-      await addDoc(collection(db, 'events', eventId, 'content'), {
-        type: 'gallery',
-        images: uploadedImages,
-        createdAt: serverTimestamp(),
-      });
       
-      revalidatePath(`/event/${eventId}`);
-      return { success: true };
-    } catch (error: any)
-{
+        revalidatePath(`/event/${eventId}`);
+        return { success: true };
+    } catch (error: any) {
       console.error("Error adding gallery content:", error);
       return { error: `No se pudo guardar la galería: ${error.message}` };
     }
