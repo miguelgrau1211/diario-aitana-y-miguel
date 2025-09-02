@@ -103,14 +103,6 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
     }
   };
 
-  useEffect(() => {
-    return () => {
-       if (isOpen) {
-         cleanup();
-       }
-    }
-  }, [isOpen, cleanup]);
-
   return (
     <>
      {currentCropImageSrc && (
