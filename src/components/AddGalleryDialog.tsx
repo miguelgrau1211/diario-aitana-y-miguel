@@ -31,6 +31,9 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
     if (e.target.files) {
         const files = Array.from(e.target.files);
         const remainingSlots = 4 - croppedImages.length;
+        
+        if (files.length === 0) return;
+
         if (files.length > remainingSlots) {
             toast({ variant: 'destructive', title: 'Límite alcanzado', description: `Puedes subir ${remainingSlots > 1 ? `hasta ${remainingSlots} imágenes más` : 'una imagen más'}.` });
         }
@@ -45,7 +48,9 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         });
 
         Promise.all(filePromises).then(base64Images => {
-            setImagesToCrop(prev => [...prev, ...base64Images]);
+            setImagesToCrop(prev => [...prev, ...base64Images.filter(Boolean)]);
+        }).catch(err => {
+            toast({ variant: 'destructive', title: 'Error al leer archivos', description: 'Algunas imágenes no se pudieron procesar.' });
         });
 
         e.target.value = '';
@@ -101,38 +106,40 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         />
       )}
     <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Añadir una nueva galería</DialogTitle>
           <DialogDescription>Sube entre 2 y 4 fotos. Podrás recortar cada una de ellas.</DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
-            {croppedImages.map((img, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
-                    <Image src={img.objectUrl} alt={`Previsualización ${index+1}`} width={img.width} height={img.height} className="object-cover w-full h-full" />
-                    <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeImage(index)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-            ))}
-            {croppedImages.length < 4 && (
-                <label htmlFor="gallery-upload" className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors">
-                    <div className="flex flex-col items-center justify-center">
-                        <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-                        <span className="text-sm text-center text-muted-foreground">Añadir foto(s)</span>
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4 max-h-[50vh] overflow-y-auto pr-2">
+                {croppedImages.map((img, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+                        <Image src={img.objectUrl} alt={`Previsualización ${index+1}`} width={img.width} height={img.height} className="object-cover w-full h-full" />
+                        <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeImage(index)}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
                     </div>
-                    <Input id="gallery-upload" type="file" multiple className="hidden" accept="image/*" onChange={handleFileChange} />
-                </label>
-            )}
+                ))}
+                {croppedImages.length < 4 && (
+                    <label htmlFor="gallery-upload" className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors">
+                        <div className="flex flex-col items-center justify-center">
+                            <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                            <span className="text-sm text-center text-muted-foreground">Añadir foto(s)</span>
+                        </div>
+                        <Input id="gallery-upload" type="file" multiple className="hidden" accept="image/*" onChange={handleFileChange} />
+                    </label>
+                )}
+            </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-auto">
             <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={isSaving || croppedImages.length < 2}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

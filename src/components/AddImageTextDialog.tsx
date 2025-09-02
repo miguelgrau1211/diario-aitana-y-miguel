@@ -102,59 +102,61 @@ export function AddImageTextDialog({ isOpen, setIsOpen, onSave, isSaving }: AddI
         />
       )}
     <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Añadir Imagen con Texto</DialogTitle>
           <DialogDescription>Combina una foto con un texto para contar una historia más completa.</DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4">
-            <div className="space-y-4">
-                <Label>Imagen</Label>
-                <label htmlFor="dropzone-file-dialog-imagetext" className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
-                    {croppedImageResult?.objectUrl ? (
-                        <Image src={croppedImageResult.objectUrl} alt="Vista previa recortada" layout="fill" className="object-contain" />
-                    ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
-                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Haz clic para subir</span></p>
-                        </div>
-                    )}
-                    <Input id="dropzone-file-dialog-imagetext" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                </label>
-                 <div>
-                    <Label>Posición de la Imagen</Label>
-                    <RadioGroup
-                        defaultValue="left"
-                        value={imagePosition}
-                        onValueChange={(value: 'left' | 'right') => setImagePosition(value)}
-                        className="flex items-center gap-4 mt-2"
-                        >
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="left" id="r1" />
-                            <Label htmlFor="r1" className="flex items-center gap-2 cursor-pointer"><AlignLeft/> Izquierda</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="right" id="r2" />
-                            <Label htmlFor="r2" className="flex items-center gap-2 cursor-pointer"><AlignRight/> Derecha</Label>
-                        </div>
-                    </RadioGroup>
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4">
+                <div className="space-y-4">
+                    <Label>Imagen</Label>
+                    <label htmlFor="dropzone-file-dialog-imagetext" className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
+                        {croppedImageResult?.objectUrl ? (
+                            <Image src={croppedImageResult.objectUrl} alt="Vista previa recortada" layout="fill" className="object-contain" />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
+                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Haz clic para subir</span></p>
+                            </div>
+                        )}
+                        <Input id="dropzone-file-dialog-imagetext" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                    </label>
+                    <div>
+                        <Label>Posición de la Imagen</Label>
+                        <RadioGroup
+                            defaultValue="left"
+                            value={imagePosition}
+                            onValueChange={(value: 'left' | 'right') => setImagePosition(value)}
+                            className="flex items-center gap-4 mt-2"
+                            >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="left" id="r1" />
+                                <Label htmlFor="r1" className="flex items-center gap-2 cursor-pointer"><AlignLeft/> Izquierda</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="right" id="r2" />
+                                <Label htmlFor="r2" className="flex items-center gap-2 cursor-pointer"><AlignRight/> Derecha</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
                 </div>
-            </div>
-            <div className="space-y-4">
-                <Label htmlFor="text-content">Texto</Label>
-                <Textarea
-                    id="text-content"
-                    placeholder="Describe el momento, la emoción, el detalle..."
-                    className="min-h-[240px] resize-none"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    disabled={isSaving}
-                />
+                <div className="space-y-4">
+                    <Label htmlFor="text-content">Texto</Label>
+                    <Textarea
+                        id="text-content"
+                        placeholder="Describe el momento, la emoción, el detalle..."
+                        className="min-h-[240px] resize-none"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        disabled={isSaving}
+                    />
+                </div>
             </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-auto">
             <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={isSaving || !croppedImageResult || !text}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

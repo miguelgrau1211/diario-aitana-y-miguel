@@ -86,28 +86,30 @@ export function AddImageDialog({ isOpen, setIsOpen, onSave, isSaving }: AddImage
         />
       )}
     <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
-      <DialogContent>
+      <DialogContent className="flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Añadir una nueva foto</DialogTitle>
           <DialogDescription>Sube y recorta una imagen que capture la esencia de este momento.</DialogDescription>
         </DialogHeader>
         
-        <div className="flex items-center justify-center w-full my-4">
-            <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
-                {croppedImageResult?.objectUrl ? (
-                    <Image src={croppedImageResult.objectUrl} alt="Vista previa recortada" width={croppedImageResult.width} height={croppedImageResult.height} className="object-contain h-full w-auto" />
-                ) : (
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
-                        <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Haz clic para subir</span> o arrastra y suelta</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG, GIF o WEBP</p>
-                    </div>
-                )}
-                <Input id="dropzone-file-dialog" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-            </label>
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
+            <div className="flex items-center justify-center w-full my-4">
+                <label htmlFor="dropzone-file-dialog" className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted transition-colors relative overflow-hidden">
+                    {croppedImageResult?.objectUrl ? (
+                        <Image src={croppedImageResult.objectUrl} alt="Vista previa recortada" width={croppedImageResult.width} height={croppedImageResult.height} className="object-contain max-h-[50vh] w-auto" />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
+                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Haz clic para subir</span> o arrastra y suelta</p>
+                            <p className="text-xs text-muted-foreground">PNG, JPG, GIF o WEBP</p>
+                        </div>
+                    )}
+                    <Input id="dropzone-file-dialog" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                </label>
+            </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-auto">
             <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={isSaving || !croppedImageResult}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
