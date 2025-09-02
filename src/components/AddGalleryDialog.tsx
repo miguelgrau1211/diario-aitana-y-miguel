@@ -50,6 +50,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         Promise.all(filePromises).then(base64Images => {
             setImagesToCrop(prev => [...prev, ...base64Images.filter(Boolean)]);
         }).catch(err => {
+            console.error(err);
             toast({ variant: 'destructive', title: 'Error al leer archivos', description: 'Algunas imágenes no se pudieron procesar.' });
         });
 
@@ -58,6 +59,10 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
   };
   
   const removeImage = (index: number) => {
+    const imageToRemove = croppedImages[index];
+    if (imageToRemove) {
+      URL.revokeObjectURL(imageToRemove.objectUrl);
+    }
     setCroppedImages(prev => prev.filter((_, i) => i !== index));
   }
 
@@ -82,6 +87,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
     if (!isSaving) {
         setIsOpen(open);
         if (!open) {
+            croppedImages.forEach(image => URL.revokeObjectURL(image.objectUrl));
             setCroppedImages([]);
             setImagesToCrop([]);
         }
@@ -94,7 +100,8 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
     return () => {
         croppedImages.forEach(image => URL.revokeObjectURL(image.objectUrl));
     }
-  }, [croppedImages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -115,12 +122,12 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         <div className="flex-1 overflow-y-auto -mx-6 px-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4 max-h-[50vh] overflow-y-auto pr-2">
                 {croppedImages.map((img, index) => (
-                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+                    <div key={img.objectUrl} className="relative aspect-square rounded-lg overflow-hidden group">
                         <Image src={img.objectUrl} alt={`Previsualización ${index+1}`} width={img.width} height={img.height} className="object-cover w-full h-full" />
                         <Button
                             variant="destructive"
                             size="icon"
-                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                             onClick={() => removeImage(index)}
                         >
                             <X className="h-4 w-4" />
@@ -139,7 +146,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
             </div>
         </div>
 
-        <DialogFooter className="mt-auto">
+        <DialogFooter className="mt-auto pt-4 border-t">
             <Button variant="ghost" onClick={() => handleCloseDialog(false)} disabled={isSaving}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={isSaving || croppedImages.length < 2}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
