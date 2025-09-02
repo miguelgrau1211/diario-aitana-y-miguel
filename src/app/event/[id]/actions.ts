@@ -136,7 +136,7 @@ export async function addGalleryContentAction({
     images,
   }: {
     eventId: string;
-    images: { buffer: Buffer; width: number; height: number; contentType: string }[];
+    images: { base64: string; width: number; height: number; contentType: string }[];
   }): Promise<{ success?: boolean; error?: string }> {
     if (!eventId || !images || images.length === 0) {
       return { error: 'Faltan datos para añadir la galería.' };
@@ -147,10 +147,10 @@ export async function addGalleryContentAction({
             const imagePath = `events/${eventId}/content/gallery_${Date.now()}_${Math.random()}.jpg`;
             const storageRef = ref(storage, imagePath);
             
-            // Upload the buffer to Firebase Storage
-            const snapshot = await uploadBytes(storageRef, image.buffer, { contentType: image.contentType });
+            const imageBuffer = Buffer.from(image.base64, 'base64');
             
-            // Get the download URL
+            const snapshot = await uploadBytes(storageRef, imageBuffer, { contentType: image.contentType });
+            
             const downloadURL = await getDownloadURL(snapshot.ref);
             
             return {

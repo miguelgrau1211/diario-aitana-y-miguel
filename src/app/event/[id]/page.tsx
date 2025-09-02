@@ -60,6 +60,17 @@ function optimisticContentReducer(
   }
 }
 
+// Helper to convert ArrayBuffer to Base64
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
 export default function EventDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -188,42 +199,43 @@ export default function EventDetailPage() {
 
   const handleGallerySubmit = (images: GalleryImageState[]) => {
     startContentActionTransition(async () => {
-        const optimisticItem: GalleryContent = {
-            id: `optimistic-${Date.now()}`,
-            type: 'gallery',
-            createdAt: new Date(),
-            images: images.map(img => ({
-                value: img.objectUrl, // Use the preview URL for optimistic update
-                imagePath: '',
-                width: img.width,
-                height: img.height,
-            })),
-        };
-        setOptimisticContent({ item: optimisticItem, type: 'add' });
-        setGalleryDialogOpen(false); // Close dialog *after* optimistic update
+      const optimisticItem: GalleryContent = {
+        id: `optimistic-${Date.now()}`,
+        type: 'gallery',
+        createdAt: new Date(),
+        images: images.map((img) => ({
+          value: img.objectUrl,
+          imagePath: '',
+          width: img.width,
+          height: img.height,
+        })),
+      };
+      setOptimisticContent({ item: optimisticItem, type: 'add' });
+      setGalleryDialogOpen(false); 
 
-        const imagePayloads = await Promise.all(
-            images.map(async (img) => {
-                const buffer = await img.blob.arrayBuffer();
-                return {
-                    buffer: Buffer.from(buffer),
-                    width: img.width,
-                    height: img.height,
-                    contentType: img.blob.type,
-                };
-            })
-        );
-        
-        const result = await addGalleryContentAction({ eventId: id, images: imagePayloads });
+      const imagePayloads = await Promise.all(
+        images.map(async (img) => {
+          const arrayBuffer = await img.blob.arrayBuffer();
+          const base64 = arrayBufferToBase64(arrayBuffer);
+          return {
+            base64,
+            width: img.width,
+            height: img.height,
+            contentType: img.blob.type,
+          };
+        })
+      );
 
-        if (result.error) {
-            toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
-        } else {
-            toast({ title: '¡Galería añadida!', description: 'Vuestras fotos han sido añadidas al recuerdo.' });
-        }
-        await syncContent();
+      const result = await addGalleryContentAction({ eventId: id, images: imagePayloads });
+
+      if (result.error) {
+        toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
+      } else {
+        toast({ title: '¡Galería añadida!', description: 'Vuestras fotos han sido añadidas al recuerdo.' });
+      }
+      await syncContent();
     });
-};
+  };
 
   const handleImageTextSubmit = (data: { image: CroppedImageResult; text: string; position: 'left' | 'right' }) => {
      startContentActionTransition(async () => {
@@ -413,7 +425,7 @@ export default function EventDetailPage() {
               {contentControls}
               <div className={cn("grid gap-2 rounded-lg overflow-hidden", gridClass)}>
                   {item.images.map((img, index) => (
-                      <div key={index} className="relative w-full" style={{aspectRatio: `${img.width} / ${img.height}`}}>
+                      <div key={img.value || index} className="relative w-full" style={{aspectRatio: `${img.width} / ${img.height}`}}>
                           {img.value && (
                             <Image 
                                 src={img.value}
