@@ -3,7 +3,7 @@
 
 import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, Timestamp, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject, type UploadResult } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { DiaryEvent, EventContent, GalleryImage } from '@/types';
@@ -139,24 +139,26 @@ export async function addGalleryContentAction(
     }
   
     try {
-        const uploadPromises = images.map(async (image) => {
+        const uploadTasks: Promise<{ uploadResult: UploadResult, width: number, height: number }>[] = images.map(async (image) => {
             const imagePath = `events/${eventId}/content/gallery_${Date.now()}_${Math.random()}.jpg`;
             const storageRef = ref(storage, imagePath);
+            const uploadResult = await uploadBytes(storageRef, image.blob, { contentType: 'image/jpeg' });
+            return { uploadResult, width: image.width, height: image.height };
+        });
 
-            const snapshot = await uploadBytes(storageRef, image.blob, {
-                contentType: 'image/jpeg',
-            });
-            const downloadURL = await getDownloadURL(snapshot.ref);
+        const uploadResults = await Promise.all(uploadTasks);
 
+        const downloadUrlTasks = uploadResults.map(async ({ uploadResult, width, height }) => {
+            const downloadURL = await getDownloadURL(uploadResult.ref);
             return {
                 value: downloadURL,
-                imagePath: imagePath,
-                width: image.width,
-                height: image.height,
+                imagePath: uploadResult.ref.fullPath,
+                width,
+                height,
             };
         });
 
-        const uploadedImages: GalleryImage[] = await Promise.all(uploadPromises);
+        const uploadedImages: GalleryImage[] = await Promise.all(downloadUrlTasks);
   
         await addDoc(collection(db, 'events', eventId, 'content'), {
             type: 'gallery',

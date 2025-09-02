@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useOptimistic, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent } from '@/types';
+import type { DiaryEvent, EventContent, TextContent, ImageContent, GalleryContent, ImageTextContent, GalleryImage } from '@/types';
 import { 
     getEventAction, 
     getEventContentAction, 
@@ -85,6 +85,22 @@ export default function EventDetailPage() {
   const [isContentActionPending, startContentActionTransition] = useTransition();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  useEffect(() => {
+    // Depuración de errores en cliente
+    const originalOnError = window.onerror;
+    window.onerror = function(msg, url, line, col, error) {
+      alert("Error: " + msg + " en " + url + ":" + line);
+      if (originalOnError) {
+        // @ts-ignore
+        originalOnError.apply(this, arguments);
+      }
+    };
+
+    return () => {
+      window.onerror = originalOnError;
+    };
+  }, []);
 
   useEffect(() => {
     if (id) {
