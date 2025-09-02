@@ -131,34 +131,37 @@ export async function addImageContentAction(
   }
 }
 
-export async function addGalleryContentAction(
-    { eventId, images }: { eventId: string; images: { blob: Blob; width: number; height: number }[] }
-  ): Promise<{ success?: boolean; error?: string }> {
+export async function addGalleryContentAction({
+    eventId,
+    images,
+  }: {
+    eventId: string;
+    images: { buffer: Buffer; width: number; height: number; contentType: string }[];
+  }): Promise<{ success?: boolean; error?: string }> {
     if (!eventId || !images || images.length === 0) {
       return { error: 'Faltan datos para añadir la galería.' };
     }
   
     try {
-        const uploadTasks: Promise<{ uploadResult: UploadResult, width: number, height: number }>[] = images.map(async (image) => {
+        const uploadPromises = images.map(async (image) => {
             const imagePath = `events/${eventId}/content/gallery_${Date.now()}_${Math.random()}.jpg`;
             const storageRef = ref(storage, imagePath);
-            const uploadResult = await uploadBytes(storageRef, image.blob, { contentType: 'image/jpeg' });
-            return { uploadResult, width: image.width, height: image.height };
-        });
-
-        const uploadResults = await Promise.all(uploadTasks);
-
-        const downloadUrlTasks = uploadResults.map(async ({ uploadResult, width, height }) => {
-            const downloadURL = await getDownloadURL(uploadResult.ref);
+            
+            // Upload the buffer to Firebase Storage
+            const snapshot = await uploadBytes(storageRef, image.buffer, { contentType: image.contentType });
+            
+            // Get the download URL
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            
             return {
                 value: downloadURL,
-                imagePath: uploadResult.ref.fullPath,
-                width,
-                height,
+                imagePath: snapshot.ref.fullPath,
+                width: image.width,
+                height: image.height,
             };
         });
 
-        const uploadedImages: GalleryImage[] = await Promise.all(downloadUrlTasks);
+        const uploadedImages: GalleryImage[] = await Promise.all(uploadPromises);
   
         await addDoc(collection(db, 'events', eventId, 'content'), {
             type: 'gallery',

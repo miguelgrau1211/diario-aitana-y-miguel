@@ -217,9 +217,21 @@ export default function EventDetailPage() {
       };
       setOptimisticContent({ item: optimisticItem, type: 'add' });
 
-      const imagePayload = images.map(img => ({ blob: img.blob, width: img.width, height: img.height }));
+      // Convert blobs to buffers to send to the server
+      const imagePayloads = await Promise.all(
+        images.map(async (img) => {
+          const buffer = await img.blob.arrayBuffer();
+          return {
+            buffer: Buffer.from(buffer),
+            width: img.width,
+            height: img.height,
+            contentType: img.blob.type,
+          };
+        })
+      );
+      
+      const result = await addGalleryContentAction({ eventId: id, images: imagePayloads });
 
-      const result = await addGalleryContentAction({ eventId: id, images: imagePayload });
        if (result.error) {
             toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
         } else {
