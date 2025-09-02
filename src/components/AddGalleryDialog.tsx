@@ -25,38 +25,38 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
   const [croppedImages, setCroppedImages] = useState<GalleryImageState[]>([]);
   const { toast } = useToast();
   
-  const [imagesToCrop, setImagesToCrop] = useState<string[]>([]);
+  const [filesToCrop, setFilesToCrop] = useState<File[]>([]);
+  const [currentCropImageSrc, setCurrentCropImageSrc] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-        const files = Array.from(e.target.files);
+        const newFiles = Array.from(e.target.files);
         const remainingSlots = 4 - croppedImages.length;
         
-        if (files.length === 0) return;
+        if (newFiles.length === 0) return;
 
-        if (files.length > remainingSlots) {
+        if (newFiles.length > remainingSlots) {
             toast({ variant: 'destructive', title: 'Límite alcanzado', description: `Puedes subir ${remainingSlots > 1 ? `hasta ${remainingSlots} imágenes más` : 'una imagen más'}.` });
         }
-
-        const filePromises = files.slice(0, remainingSlots).map(file => {
-            return new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (loadEvent) => resolve(loadEvent.target?.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        });
-
-        Promise.all(filePromises).then(base64Images => {
-            setImagesToCrop(prev => [...prev, ...base64Images.filter(Boolean)]);
-        }).catch(err => {
-            console.error(err);
-            toast({ variant: 'destructive', title: 'Error al leer archivos', description: 'Algunas imágenes no se pudieron procesar.' });
-        });
-
-        e.target.value = '';
+        
+        // Add new files to the queue
+        setFilesToCrop(prev => [...prev, ...newFiles.slice(0, remainingSlots)]);
+        
+        e.target.value = ''; // Reset input to allow re-selecting
     }
   };
+
+  // Effect to process the queue of files to be cropped
+  useEffect(() => {
+    if (filesToCrop.length > 0 && !currentCropImageSrc) {
+        const nextFile = filesToCrop[0];
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            setCurrentCropImageSrc(loadEvent.target?.result as string);
+        };
+        reader.readAsDataURL(nextFile);
+    }
+  }, [filesToCrop, currentCropImageSrc]);
   
   const removeImage = (index: number) => {
     const imageToRemove = croppedImages[index];
@@ -70,8 +70,10 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
     if (result) {
         setCroppedImages(prev => [...prev, { ...result, objectUrl: result.objectUrl }]);
     }
-    // Remove the processed image and move to the next, if any
-    setImagesToCrop(prev => prev.slice(1));
+    
+    // Remove the processed image from the queue and reset the crop dialog src
+    setFilesToCrop(prev => prev.slice(1));
+    setCurrentCropImageSrc(null);
   };
 
   const handleSubmit = () => {
@@ -89,12 +91,11 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         if (!open) {
             croppedImages.forEach(image => URL.revokeObjectURL(image.objectUrl));
             setCroppedImages([]);
-            setImagesToCrop([]);
+            setFilesToCrop([]);
+            setCurrentCropImageSrc(null);
         }
     }
   };
-  
-  const currentImageToCrop = useMemo(() => imagesToCrop[0] || null, [imagesToCrop]);
 
   useEffect(() => {
     return () => {
@@ -105,9 +106,9 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
 
   return (
     <>
-     {currentImageToCrop && (
+     {currentCropImageSrc && (
         <CropDialog 
-            imageSrc={currentImageToCrop}
+            imageSrc={currentCropImageSrc}
             onConfirm={handleCropConfirm}
             showSkipButton={true}
         />
