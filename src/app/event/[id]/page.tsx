@@ -221,7 +221,6 @@ export default function EventDetailPage() {
             toast({ title: '¡Galería añadida!', description: 'Vuestras fotos han sido añadidas al recuerdo.' });
         }
         await syncContent();
-        images.forEach(img => URL.revokeObjectURL(img.objectUrl));
     });
 };
 
@@ -255,7 +254,6 @@ export default function EventDetailPage() {
             toast({ title: '¡Contenido añadido!', description: 'La combinación de imagen y texto se ha guardado.' });
         }
         await syncContent();
-        URL.revokeObjectURL(data.image.objectUrl);
      });
   };
 

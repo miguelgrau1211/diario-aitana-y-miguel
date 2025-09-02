@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -58,11 +58,14 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
   }, [filesToCrop, currentCropImageSrc]);
   
   const removeImage = (index: number) => {
-    const imageToRemove = croppedImages[index];
-    if (imageToRemove) {
-      URL.revokeObjectURL(imageToRemove.objectUrl);
-    }
-    setCroppedImages(prev => prev.filter((_, i) => i !== index));
+    setCroppedImages(prev => {
+        const newImages = [...prev];
+        const removed = newImages.splice(index, 1);
+        if (removed[0]?.objectUrl) {
+            URL.revokeObjectURL(removed[0].objectUrl);
+        }
+        return newImages;
+    });
   }
 
   const handleCropConfirm = (result: CroppedImageResult | null) => {
@@ -84,24 +87,29 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
     setIsOpen(false);
   };
   
+  const cleanup = useCallback(() => {
+    croppedImages.forEach(image => URL.revokeObjectURL(image.objectUrl));
+    setCroppedImages([]);
+    setFilesToCrop([]);
+    setCurrentCropImageSrc(null);
+  }, [croppedImages]);
+
   const handleCloseDialog = (open: boolean) => {
     if (!isSaving) {
         setIsOpen(open);
         if (!open) {
-            croppedImages.forEach(image => URL.revokeObjectURL(image.objectUrl));
-            setCroppedImages([]);
-            setFilesToCrop([]);
-            setCurrentCropImageSrc(null);
+            cleanup();
         }
     }
   };
 
   useEffect(() => {
     return () => {
-        croppedImages.forEach(image => URL.revokeObjectURL(image.objectUrl));
+       if (isOpen) {
+         cleanup();
+       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isOpen, cleanup]);
 
   return (
     <>
