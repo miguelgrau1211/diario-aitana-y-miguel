@@ -87,6 +87,21 @@ export default function EventDetailPage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   useEffect(() => {
+    const originalOnError = window.onerror;
+    window.onerror = function(msg, url, line, col, error) {
+      alert("Error: " + msg + " en " + url + ":" + line);
+       if (originalOnError) {
+        // @ts-ignore
+        originalOnError(msg, url, line, col, error);
+      }
+    };
+     
+    return () => {
+      window.onerror = originalOnError;
+    }
+  }, []);
+
+  useEffect(() => {
     if (id) {
       const fetchEventData = async () => {
         setLoading(true);
@@ -201,7 +216,6 @@ export default function EventDetailPage() {
       };
       setOptimisticContent({ item: optimisticItem, type: 'add' });
 
-      // Convert blobs to buffers to send to the server
       const imagePayloads = await Promise.all(
         images.map(async (img) => {
           const buffer = await img.blob.arrayBuffer();
