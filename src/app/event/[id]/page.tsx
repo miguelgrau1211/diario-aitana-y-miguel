@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddContentControl } from '@/components/AddContentControl';
 import { cn } from '@/lib/utils';
-import { AddGalleryDialog } from '@/components/AddGalleryDialog';
+import { AddGalleryDialog, type GalleryImageState } from '@/components/AddGalleryDialog';
 import { AddImageTextDialog } from '@/components/AddImageTextDialog';
 
 type OptimisticUpdate = {
@@ -186,15 +186,14 @@ export default function EventDetailPage() {
     });
   };
 
-  const handleGallerySubmit = (images: CroppedImageResult[]) => {
+  const handleGallerySubmit = (images: GalleryImageState[]) => {
     startContentActionTransition(async () => {
-      const objectUrls = images.map(img => img.objectUrl);
       const optimisticItem: GalleryContent = {
           id: `optimistic-${Date.now()}`,
           type: 'gallery',
           createdAt: new Date(),
-          images: images.map((img, index) => ({
-              value: objectUrls[index],
+          images: images.map(img => ({
+              value: img.objectUrl,
               imagePath: '',
               width: img.width,
               height: img.height,
@@ -202,16 +201,16 @@ export default function EventDetailPage() {
       };
       setOptimisticContent({ item: optimisticItem, type: 'add' });
 
-      const imageBlobs = images.map(img => ({ blob: img.blob, width: img.width, height: img.height }));
+      const imagePayload = images.map(img => ({ blob: img.blob, width: img.width, height: img.height }));
 
-      const result = await addGalleryContentAction({ eventId: id, images: imageBlobs });
+      const result = await addGalleryContentAction({ eventId: id, images: imagePayload });
        if (result.error) {
             toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
         } else {
             toast({ title: '¡Galería añadida!', description: 'Vuestras fotos han sido añadidas al recuerdo.' });
         }
         await syncContent();
-        objectUrls.forEach(url => URL.revokeObjectURL(url));
+        images.forEach(img => URL.revokeObjectURL(img.objectUrl));
     });
   };
 

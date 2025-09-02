@@ -9,14 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, X } from 'lucide-react';
 import { CropDialog, type CroppedImageResult } from './CropDialog';
 
-interface GalleryImageState extends CroppedImageResult {
+export interface GalleryImageState extends CroppedImageResult {
     objectUrl: string;
 }
 
 interface AddGalleryDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onSave: (images: { blob: Blob; width: number; height: number }[]) => void;
+  onSave: (images: GalleryImageState[]) => void;
   isSaving: boolean;
 }
 
@@ -80,7 +80,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         toast({ variant: 'destructive', title: 'Imágenes insuficientes', description: 'Una galería debe tener al menos 2 imágenes.' });
         return;
     }
-    onSave(croppedImages.map(img => ({ blob: img.blob, width: img.width, height: img.height })));
+    onSave(croppedImages);
     setIsOpen(false);
   };
   
