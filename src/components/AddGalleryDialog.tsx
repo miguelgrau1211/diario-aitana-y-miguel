@@ -84,7 +84,7 @@ export function AddGalleryDialog({ isOpen, setIsOpen, onSave, isSaving }: AddGal
         return;
     }
     onSave(croppedImages);
-    setIsOpen(false);
+    // Let the parent component close the dialog
   };
   
   const cleanup = useCallback(() => {

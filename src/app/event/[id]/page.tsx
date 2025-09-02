@@ -200,6 +200,7 @@ export default function EventDetailPage() {
             })),
         };
         setOptimisticContent({ item: optimisticItem, type: 'add' });
+        setGalleryDialogOpen(false); // Close dialog *after* optimistic update
 
         const imagePayloads = await Promise.all(
             images.map(async (img) => {
