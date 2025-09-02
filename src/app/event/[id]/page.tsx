@@ -87,21 +87,6 @@ export default function EventDetailPage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   useEffect(() => {
-    const originalOnError = window.onerror;
-    window.onerror = function(msg, url, line, col, error) {
-      alert("Error: " + msg + " en " + url + ":" + line);
-       if (originalOnError) {
-        // @ts-ignore
-        originalOnError(msg, url, line, col, error);
-      }
-    };
-     
-    return () => {
-      window.onerror = originalOnError;
-    }
-  }, []);
-
-  useEffect(() => {
     if (id) {
       const fetchEventData = async () => {
         setLoading(true);
@@ -203,34 +188,34 @@ export default function EventDetailPage() {
 
   const handleGallerySubmit = (images: GalleryImageState[]) => {
     startContentActionTransition(async () => {
-      const optimisticItem: GalleryContent = {
-          id: `optimistic-${Date.now()}`,
-          type: 'gallery',
-          createdAt: new Date(),
-          images: images.map(img => ({
-              value: img.objectUrl,
-              imagePath: '',
-              width: img.width,
-              height: img.height,
-          })),
-      };
-      setOptimisticContent({ item: optimisticItem, type: 'add' });
+        const optimisticItem: GalleryContent = {
+            id: `optimistic-${Date.now()}`,
+            type: 'gallery',
+            createdAt: new Date(),
+            images: images.map(img => ({
+                value: img.objectUrl, // Use the preview URL for optimistic update
+                imagePath: '',
+                width: img.width,
+                height: img.height,
+            })),
+        };
+        setOptimisticContent({ item: optimisticItem, type: 'add' });
 
-      const imagePayloads = await Promise.all(
-        images.map(async (img) => {
-          const buffer = await img.blob.arrayBuffer();
-          return {
-            buffer: Buffer.from(buffer),
-            width: img.width,
-            height: img.height,
-            contentType: img.blob.type,
-          };
-        })
-      );
-      
-      const result = await addGalleryContentAction({ eventId: id, images: imagePayloads });
+        const imagePayloads = await Promise.all(
+            images.map(async (img) => {
+                const buffer = await img.blob.arrayBuffer();
+                return {
+                    buffer: Buffer.from(buffer),
+                    width: img.width,
+                    height: img.height,
+                    contentType: img.blob.type,
+                };
+            })
+        );
+        
+        const result = await addGalleryContentAction({ eventId: id, images: imagePayloads });
 
-       if (result.error) {
+        if (result.error) {
             toast({ variant: 'destructive', title: 'Error al crear la galería', description: result.error });
         } else {
             toast({ title: '¡Galería añadida!', description: 'Vuestras fotos han sido añadidas al recuerdo.' });
@@ -238,7 +223,7 @@ export default function EventDetailPage() {
         await syncContent();
         images.forEach(img => URL.revokeObjectURL(img.objectUrl));
     });
-  };
+};
 
   const handleImageTextSubmit = (data: { image: CroppedImageResult; text: string; position: 'left' | 'right' }) => {
      startContentActionTransition(async () => {
